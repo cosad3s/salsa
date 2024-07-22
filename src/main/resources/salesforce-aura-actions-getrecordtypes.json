@@ -1,0 +1,12 @@
+[
+  {
+    "descriptor": "serviceComponent://ui.global.components.one.one.controller.OneController/ACTION$getCurrentApp",
+    "params": {
+    }
+  },
+  {
+    "descriptor": "serviceComponent://ui.force.components.controllers.hostConfig.HostConfigController/ACTION$getConfigData",
+    "params": {
+    }
+  }
+]

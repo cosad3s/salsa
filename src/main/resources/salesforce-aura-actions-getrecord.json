@@ -1,0 +1,14 @@
+[
+  {
+    "descriptor": "serviceComponent://ui.force.components.controllers.detail.DetailController/ACTION$getRecord",
+    "params": {
+      "recordId":""
+    }
+  },
+  {
+    "descriptor": "serviceComponent://ui.force.components.controllers.recordGlobalValueProvider.RecordGvpController/ACTION$getRecord",
+    "params": {
+      "recordDescriptor":""
+    }
+  }
+]

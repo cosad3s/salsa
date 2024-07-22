@@ -1,0 +1,10 @@
+[
+  {
+    "descriptor": "aura://RecordUiController/ACTION$getRecordWithFields",
+    "params": {
+      "objectApiName": "",
+      "recordId":"",
+      "fields":[""]
+    }
+  }
+]

@@ -1,0 +1,12 @@
+[
+  {
+    "descriptor": "aura://RecordUiController/ACTION$createRecord",
+    "params": {
+      "recordInput": {
+        "apiName": "",
+        "fields": {
+        }
+      }
+    }
+  }
+]

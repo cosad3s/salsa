@@ -1,0 +1,44 @@
+[
+  {
+    "descriptor": "serviceComponent://ui.force.components.controllers.lists.selectableListDataProvider.SelectableListDataProviderController/ACTION$getItems",
+    "params": {
+      "entityNameOrId": "",
+      "layoutType": "FULL",
+      "pageSize": "",
+      "limit": "",
+      "currentPage": "",
+      "useTimeout": false,
+      "getCount": true,
+      "enableRowActions": false
+    }
+  },
+  {
+    "descriptor": "serviceComponent://ui.search.components.forcesearch.scopedresultsdataprovider.ScopedResultsDataProviderController/ACTION$getLookupItems",
+    "params": {
+      "scope":"",
+      "term":"",
+      "pageSize": "",
+      "currentPage": "",
+      "enableRowActions":false,
+      "additionalFields":[],
+      "useADS":false
+    }
+  },
+  {
+    "descriptor": "aura://ListUiController/ACTION$getListsByObjectName",
+    "params": {
+      "objectApiName":""
+    }
+  },{
+    "descriptor": "aura://MruListUiController/ACTION$getMruListUi",
+    "params": {
+      "objectApiName":""
+    }
+  },
+  {
+    "descriptor": "aura://MruListUiController/ACTION$getMruListRecords",
+    "params": {
+      "objectApiName":""
+    }
+  }
+]

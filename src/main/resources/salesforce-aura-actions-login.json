@@ -1,0 +1,9 @@
+[
+  {
+    "descriptor": "apex://LightningLoginFormController/ACTION$login",
+    "params": {
+      "username":"",
+      "password":"",
+      "updateUserCountrySettings":true}
+  }
+]

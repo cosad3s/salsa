@@ -1,0 +1,12 @@
+[
+  {
+    "descriptor": "aura://RecordUiController/ACTION$updateRecord",
+    "params": {
+      "apiName": "",
+      "recordId":"",
+      "recordInput": {
+        "fields": {"":""}
+      }
+    }
+  }
+]

@@ -1,0 +1,8 @@
+[
+  {
+    "descriptor": "aura://RecordUiController/ACTION$getObjectInfo",
+    "params": {
+      "objectApiName": ""
+    }
+  }
+]
