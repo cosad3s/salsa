@@ -109,12 +109,13 @@ public abstract class BaseClient {
         // Find app name (maybe not useful)
         List<Header> appNameHeader = HttpUtils.findHeaders(responseAuraToken, "link");
         if (!appNameHeader.isEmpty()) {
-            String regex = ".*%40markup%3A%2F%2F([a-zA-Z0-9:%]*)%22%3A%22.*";
+            String regex = "%40markup%3A%2F%2F([a-zA-Z0-9:%])*?%22%3A%22";
             Pattern p = Pattern.compile(regex);
             Matcher m = p.matcher(appNameHeader.get(0).getValue());
             boolean find = m.find();
             if (find) {
-                this.auraAppName = HttpUtils.urlDecode(m.group(1));
+                String fullString = m.group(0); // ex: %40markup%3A%2F%2Fsiteforce%3AcommunityApp%22%3A%22
+                this.auraAppName = HttpUtils.urlDecode(fullString.replace("%40markup%3A%2F%2F", "").replace("%22%3A%22",""));
                 logger.info("[*] Found the app name: {}", this.auraAppName);
             } else {
                 logger.warn("[!] Cannot find the Salesforce Aura app name. Will continue with a default one [{}]", this.auraAppName);
