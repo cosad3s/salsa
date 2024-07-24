@@ -427,6 +427,7 @@ public class SFClient extends BaseClient {
                         for (Map<String, Object> partialRecord : listOfPartialRecords) {
                             Object id = partialRecord.get("id");
 
+                            if (id != null) {
                             try {
                                 SalesforceSObjectPojo sObjectPojo = this.getObject(id.toString(), "ListView");
                                 objects.add(sObjectPojo);
@@ -436,6 +437,7 @@ public class SFClient extends BaseClient {
                                 logger.error("[!] Invalid parameter transmitted to Aura.");
                             }
                         }
+                    }
                     }
 
                     // "result" case
