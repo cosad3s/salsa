@@ -300,3 +300,7 @@ Thanks for all these ressources (tools, write-ups, docs, ...), which help me a l
 - https://web.archive.org/web/20201031233746/https://www.enumerated.de/index/salesforce
 - https://codefriar.wordpress.com/2014/10/30/eval-in-apex-secure-dynamic-code-evaluation-on-the-salesforce1-platform/
 - https://blog.intigriti.com/hacking-tools/hacking-salesforce-lightning-guide-for-bug-hunters
+
+## Licence
+
+Released under [GPL-3.0 license](/LICENSE).  
