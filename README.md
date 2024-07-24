@@ -266,7 +266,7 @@ Picked up _JAVA_OPTIONS: -Dawt.useSystemAAFontSettings=on -Dswing.aatext=true
 
 *What's is the difference between `sid` and `token` ?*
 
-> The `token` is used for authenticated Aura controller interactions. The `sid` is used to interact with other APIs. The format are not the same though: for the `token` it is more like a JWT, for the `sid` it is prefixed by the organization identifier.
+> The `token` is used for authenticated Aura controller interactions. The `sid` is used to interact with other APIs (and sometimes Aura controllers). The format are not the same though: for the `token` it is more like a JWT, for the `sid` it is prefixed by the organization identifier.
 
 *Why there are limitations regarding the amount of data dump in queries for example ?*
 

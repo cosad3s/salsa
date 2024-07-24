@@ -102,7 +102,6 @@ public abstract class BaseClient {
             throw new SalesforceAuraAuthenticationException();
         }
 
-        // Aura token will be added to the cookie jar (same host)
         this.credentials.setToken(token);
         this.credentials.setUsername(credentials.getUsername());
         this.credentials.setPassword(credentials.getPassword());
@@ -137,7 +136,6 @@ public abstract class BaseClient {
         requestBodyPojo.setAppName(this.auraAppName);
         requestBodyPojo.setMode(this.auraContextMode);
         String requestBody = requestBodyPojo.toString();
-
 
         int retries = 0;
 
@@ -180,6 +178,12 @@ public abstract class BaseClient {
             // Process the HTTP response
             try {
                 salesforceAuraHttpResponseBody = AuraHttpUtils.parseHttpResponseBody(response.getBody());
+
+                // Once the first request is sent with valid authentication and not desync, the cookie 'sid' can be used
+                if (StringUtils.isNotBlank(this.credentials.getSid())) {
+                    this.httpClient.addCookie("sid", this.credentials.getSid());
+                }
+
                 if (salesforceAuraHttpResponseBody != null) {
                     salesforceAuraHttpResponseBody.setRawBody(response.getBody());
                     return salesforceAuraHttpResponseBody;

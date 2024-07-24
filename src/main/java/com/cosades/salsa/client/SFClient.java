@@ -428,16 +428,16 @@ public class SFClient extends BaseClient {
                             Object id = partialRecord.get("id");
 
                             if (id != null) {
-                            try {
-                                SalesforceSObjectPojo sObjectPojo = this.getObject(id.toString(), "ListView");
-                                objects.add(sObjectPojo);
-                            } catch (SalesforceAuraMissingRecordIdException e) {
-                                logger.error("[!] Error on search for record {} from previous list.", id);
-                            } catch (SalesforceAuraInvalidParameters e) {
-                                logger.error("[!] Invalid parameter transmitted to Aura.");
+                                try {
+                                    SalesforceSObjectPojo sObjectPojo = this.getObject(id.toString(), "ListView");
+                                    objects.add(sObjectPojo);
+                                } catch (SalesforceAuraMissingRecordIdException e) {
+                                    logger.error("[!] Error on search for record {} from previous list.", id);
+                                } catch (SalesforceAuraInvalidParameters e) {
+                                    logger.error("[!] Invalid parameter transmitted to Aura.");
+                                }
                             }
                         }
-                    }
                     }
 
                     // "result" case

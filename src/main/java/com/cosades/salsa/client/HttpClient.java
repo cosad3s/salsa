@@ -12,6 +12,7 @@ import org.apache.hc.client5.http.cookie.BasicCookieStore;
 import org.apache.hc.client5.http.cookie.CookieStore;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.impl.cookie.BasicClientCookie;
 import org.apache.hc.client5.http.impl.io.BasicHttpClientConnectionManager;
 import org.apache.hc.client5.http.socket.ConnectionSocketFactory;
 import org.apache.hc.client5.http.socket.PlainConnectionSocketFactory;
@@ -188,6 +189,15 @@ public class HttpClient {
         } catch (IOException e) {
             logger.error("[!] Error on GET request to {}", uri, e);
             return new HttpReponsePojo();
+        }
+    }
+
+    public void addCookie(final String name, final String value) {
+        BasicClientCookie cookie = new BasicClientCookie(name, value);
+        cookie.setDomain(this.baseUrl.getHost());
+        cookie.setPath(this.baseUrl.getPath());
+        if (this.cookieStore.getCookies().stream().noneMatch(c -> name.equals(c.getName()))) {
+            this.cookieStore.addCookie(cookie);
         }
     }
 }
