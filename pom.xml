@@ -177,4 +177,8 @@
         </repository>
     </distributionManagement>
 
+    <scm>
+		<developerConnection>scm:git:https://github.com/cosad3s/salsa.git</developerConnection>
+    </scm>
+
 </project>
