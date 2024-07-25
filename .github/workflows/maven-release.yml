@@ -25,7 +25,6 @@ jobs:
       env:
         JAVA_HOME: /usr/lib/jvm/java-17-openjdk/
       with:
-        maven-repo-server-id: github
         git-release-bot-name: "cosad3s (bot)"
         git-release-bot-email: "cosad3s@outlook.com"
         release-branch-name: main
