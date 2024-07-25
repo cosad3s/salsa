@@ -26,6 +26,8 @@ jobs:
         distribution: 'temurin'
         server-id: github
         settings-path: ${{ github.workspace }} 
+        server-username: ${{ secrets.GITHUB_ACTOR }}
+        server-password: ${{ github.token }}
 
     - name: Maven Release x GitHub Packages
       run: |
