@@ -178,8 +178,10 @@
     </distributionManagement>
 
     <scm>
-        <connection>git@github.com:cosad3s/salsa.git</connection>
-		<developerConnection>git@github.com:cosad3s/salsa.git</developerConnection>
+        <connection>scm:git:https://github.com/cosad3s/salsa.git</connection>
+		<developerConnection>scm:git:https://github.com/cosad3s/salsa.git</developerConnection>
+        <url>git@github.com:github.com/cosad3s/salsa.git</url>
+        <tag>HEAD</tag>
     </scm>
 
 </project>
