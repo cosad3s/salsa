@@ -25,6 +25,7 @@ jobs:
       env:
         JAVA_HOME: /usr/lib/jvm/java-17-openjdk/
       with:
+        maven-args: "-Dmaven.javadoc.skip=true -DskipTests -DskipITs -Dmaven.deploy.skip=true"
         git-release-bot-name: "cosad3s (bot)"
         git-release-bot-email: "cosad3s@outlook.com"
         release-branch-name: main
