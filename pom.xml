@@ -4,7 +4,7 @@
 
     <groupId>com.cosades</groupId>
     <artifactId>salsa</artifactId>
-    <version>1.0.1</version>
+    <version>1.0.2-SNAPSHOT</version>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
@@ -171,7 +171,7 @@
         <connection>scm:git:${project.scm.url}</connection>
         <developerConnection>scm:git:${project.scm.url}</developerConnection>
         <url>git@github.com:cosad3s/salsa.git</url>
-        <tag>salsa-1.0.1</tag>
+        <tag>HEAD</tag>
     </scm>
 
 </project>
