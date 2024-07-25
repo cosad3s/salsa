@@ -21,7 +21,7 @@ jobs:
         ref: main
 
     - name: Release
-      uses: qcastel/github-actions-maven-release@v.1.12.41
+      uses: qcastel/github-actions-maven-release@v1.12.41
       env:
         JAVA_HOME: /usr/lib/jvm/java-17-openjdk/
       with:
