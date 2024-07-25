@@ -31,8 +31,7 @@ jobs:
       run: |
         git config --global user.name "cosad3s - Github Actions"
         git config --global user.email "cosad3s@outlook.com"
-        mvn release:prepare --batch-mode 
-        mvn release:perform -s $GITHUB_WORKSPACE/settings.xml
+        mvn -B release:prepare release:perform
       env:
         GITHUB_TOKEN: ${{ github.token }}
 
