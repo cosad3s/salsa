@@ -72,6 +72,13 @@ named arguments:
   --trace                Increase the log level to TRACE mode. (default: false)
 ```
 
+### Docker
+
+```bash
+docker build -t salsa --no-cache .
+docker run salsa:latest <args>
+````
+
 ### Examples
 
 <details>
