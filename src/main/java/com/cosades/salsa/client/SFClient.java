@@ -32,7 +32,8 @@ public class SFClient extends BaseClient {
 
     public SFClient(final String baseUrl,
                     final String proxy,
-                    final String userAgent) throws HttpClientBadUrlException {
+                    final String userAgent,
+                    final String appName) throws HttpClientBadUrlException {
         if (StringUtils.isNotBlank(proxy)) {
             String[] proxyParts = proxy.split(":");
             if (proxyParts.length != 2) {
@@ -45,6 +46,10 @@ public class SFClient extends BaseClient {
         } else {
             this.httpClient = new HttpClient(baseUrl, userAgent, null, -1);
         }
+
+        if (StringUtils.isNotBlank(appName)) {
+            this.auraAppNames.addFirst(appName);
+        }
         this.auraAppName = this.auraAppNames.pop();
     }
 
@@ -56,14 +61,11 @@ public class SFClient extends BaseClient {
                     final boolean apiEnabledForTypes,
                     final boolean customTypesOnly,
                     final String appName) throws HttpClientBadUrlException {
-        this(baseUrl, proxy, userAgent);
+        this(baseUrl, proxy, userAgent, appName);
         this.introspectionEnabledForTypes = introspectionEnabledForTypes;
         this.wordlistEnabledForTypes = wordlistEnabledForTypes;
         this.apiEnabledForTypes = apiEnabledForTypes;
         this.customTypesOnly = customTypesOnly;
-        if (StringUtils.isNotBlank(appName)) {
-            this.auraAppNames.addFirst(appName);
-        }
     }
 
     /**
