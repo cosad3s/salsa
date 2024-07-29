@@ -192,12 +192,11 @@ public class HttpClient {
         }
     }
 
-    public void addCookie(final String name, final String value) {
+    public void updateCookie(final String name, final String value) {
         BasicClientCookie cookie = new BasicClientCookie(name, value);
         cookie.setDomain(this.baseUrl.getHost());
         cookie.setPath(this.baseUrl.getPath());
-        if (this.cookieStore.getCookies().stream().noneMatch(c -> name.equals(c.getName()))) {
-            this.cookieStore.addCookie(cookie);
-        }
+        this.cookieStore.getCookies().removeIf(c -> name.equals(c.getName()));
+        this.cookieStore.addCookie(cookie);
     }
 }

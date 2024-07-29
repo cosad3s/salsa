@@ -130,6 +130,7 @@ public abstract class BaseClient {
         this.credentials.setUsername(credentials.getUsername());
         this.credentials.setPassword(credentials.getPassword());
         this.credentials.setSid(credentials.getSid());
+        this.httpClient.updateCookie("sid", this.credentials.getSid());
     }
 
     protected SalesforceAuraHttpResponseBodyPojo sendAura(final SalesforceAuraHttpRequestBodyPojo requestBodyPojo) throws SalesforceAuraClientBadRequestException, SalesforceAuraUnauthenticatedException, SalesforceAuraInvalidParameters {
@@ -179,11 +180,6 @@ public abstract class BaseClient {
             // Process the HTTP response
             try {
                 salesforceAuraHttpResponseBody = AuraHttpUtils.parseHttpResponseBody(response.getBody());
-
-                // Once the first request is sent with valid authentication and not desync, the cookie 'sid' can be used
-                if (StringUtils.isNotBlank(this.credentials.getSid())) {
-                    this.httpClient.addCookie("sid", this.credentials.getSid());
-                }
 
                 if (salesforceAuraHttpResponseBody != null) {
                     salesforceAuraHttpResponseBody.setRawBody(response.getBody());
