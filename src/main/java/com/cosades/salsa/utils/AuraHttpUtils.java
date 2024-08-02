@@ -5,6 +5,7 @@ import com.cosades.salsa.enumeration.SalesforceAuraHttpResponseBodyActionsStateE
 import com.cosades.salsa.exception.SalesforceAuraClientCSRFException;
 import com.cosades.salsa.exception.SalesforceAuraClientNoAccessException;
 import com.cosades.salsa.exception.SalesforceAuraClientNotSyncException;
+import com.cosades.salsa.exception.SalesforceAuraClientNotSyncNoFwuidException;
 import com.cosades.salsa.pojo.SalesforceAuraHttpResponseBodyPojo;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -21,7 +22,7 @@ import java.util.stream.Collectors;
 public abstract class AuraHttpUtils {
     private static final Logger LOGGER = LoggerFactory.getLogger(AuraHttpUtils.class);
 
-    public static SalesforceAuraHttpResponseBodyPojo parseHttpResponseBody(final String responseBody) throws SalesforceAuraClientNotSyncException, SalesforceAuraClientCSRFException {
+    public static SalesforceAuraHttpResponseBodyPojo parseHttpResponseBody(final String responseBody) throws SalesforceAuraClientNotSyncException, SalesforceAuraClientCSRFException, SalesforceAuraClientNotSyncNoFwuidException, SalesforceAuraClientNoAccessException {
         try {
             ObjectMapper om = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
             SalesforceAuraHttpResponseBodyPojo response = om.readValue(responseBody, SalesforceAuraHttpResponseBodyPojo.class);
@@ -30,7 +31,8 @@ public abstract class AuraHttpUtils {
             return response;
         } catch (JsonProcessingException e) {
             LOGGER.debug("[x] Error on parsing HTTP body {}", responseBody);
-            // Legacy case for out-of-sync
+            // Cases for out-of-sync
+            checkOutOfSyncClientNoFwuid(responseBody);
             checkOutOfSyncClientLegacy(responseBody);
             checkCSRFClient(responseBody);
             checkAuraNoAccess(responseBody);
@@ -179,6 +181,21 @@ public abstract class AuraHttpUtils {
             if (matcher.find()) {
                 throw new SalesforceAuraClientNotSyncException(response.getContext().getFwuid());
             }
+        }
+    }
+
+    /**
+     * Client out of sync without providing the correct Fwuid. The response body cannot be parsed as valid JSON neither.
+     * The solution is to relaunch a new request without authentication credentials
+     * @param responseBody
+     * @throws SalesforceAuraClientNotSyncNoFwuidException
+     */
+    private static void checkOutOfSyncClientNoFwuid(final String responseBody) throws SalesforceAuraClientNotSyncNoFwuidException {
+        final String regex = ".*markup://aura:clientOutOfSync.*";
+        final Pattern regexPattern = Pattern.compile(regex);
+        final Matcher matcher = regexPattern.matcher(responseBody);
+        if (matcher.find()) {
+            throw new SalesforceAuraClientNotSyncNoFwuidException();
         }
     }
 
