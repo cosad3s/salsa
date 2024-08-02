@@ -101,7 +101,7 @@ public class SFClient extends BaseClient {
      * @param recordId: requested recordId (required)
      * @param sObjectTypes: requested objectType(s) (optional; but more chance to find the record)
      */
-    public SalesforceSObjectPojo getObject(final String recordId, final String ... sObjectTypes) throws SalesforceAuraMissingRecordIdException, SalesforceAuraInvalidParameters, SalesforceAuraClientBadRequestException, SalesforceAuraUnauthenticatedException {
+    public SalesforceSObjectPojo getObject(final String recordId, final boolean recursive, final String ... sObjectTypes) throws SalesforceAuraMissingRecordIdException, SalesforceAuraInvalidParameters, SalesforceAuraClientBadRequestException, SalesforceAuraUnauthenticatedException {
         Map<SalesforceItemKeyPojo, SalesforceSObjectPojo> items = new HashMap<>();
 
         if (sObjectTypes == null) {
@@ -114,10 +114,15 @@ public class SFClient extends BaseClient {
             }
         }
 
+        // Try to find objects referenced in fields
+        if (recursive) {
+            this.getSubObjects(items);
+        }
+
         return SObjectUtils.merge(items.values());
     }
 
-    public List<SalesforceSObjectPojo> getObjects(final String[] sObjectTypes) throws SalesforceAuraClientBadRequestException, SalesforceAuraUnauthenticatedException {
+    public List<SalesforceSObjectPojo> getObjects(final String[] sObjectTypes) throws SalesforceAuraClientBadRequestException, SalesforceAuraUnauthenticatedException, SalesforceAuraInvalidParameters, SalesforceAuraMissingRecordIdException {
         Map<SalesforceItemKeyPojo, SalesforceSObjectPojo> items = new HashMap<>();
 
         if (sObjectTypes != null) {
@@ -127,6 +132,9 @@ public class SFClient extends BaseClient {
             logger.info("[*] Looking for all objects with standard or custom types.");
             this.getObjects(items, null);
         }
+
+        // Try to find objects referenced in fields
+        this.getSubObjects(items);
 
         Set<String> retrievedRecordIds = items.keySet().stream().map(SalesforceItemKeyPojo::getRecordId).collect(Collectors.toSet());
 
@@ -144,6 +152,60 @@ public class SFClient extends BaseClient {
         }
 
         return mergedRetrievedObjects;
+    }
+
+    /**
+     * Dedicated to dig into objects fields in order to find previously not recovered items
+     * @param items
+     * @throws SalesforceAuraUnauthenticatedException
+     * @throws SalesforceAuraInvalidParameters
+     * @throws SalesforceAuraClientBadRequestException
+     * @throws SalesforceAuraMissingRecordIdException
+     */
+    private void getSubObjects(Map<SalesforceItemKeyPojo, SalesforceSObjectPojo> items) throws SalesforceAuraUnauthenticatedException, SalesforceAuraInvalidParameters, SalesforceAuraClientBadRequestException, SalesforceAuraMissingRecordIdException {
+
+        if (!items.isEmpty()) {
+            logger.debug("[x] Will try to find sub-objects from {} items", items.size());
+            Set<SalesforceSObjectFieldPojo> subObjects = new HashSet<>();
+            for (SalesforceSObjectPojo foundObject : items.values()) {
+                Set<SalesforceSObjectFieldPojo> fields = foundObject.getFields().stream().filter(f -> (f.getValue() instanceof SalesforceSObjectPojo)).collect(Collectors.toSet());
+                if (!fields.isEmpty()) {
+                    subObjects.addAll(fields.stream().filter(f -> ((SalesforceSObjectPojo) (f.getValue())).getFields().stream().anyMatch(subfield -> subfield.getName().equalsIgnoreCase("id"))).collect(Collectors.toSet()));
+                }
+            }
+            logger.debug("[x] Found potential {} sub-objects to dig", subObjects.size());
+            Map<String, String> subObjectsToSearch = new HashMap<>();
+            if (!subObjects.isEmpty()) {
+                for (SalesforceSObjectFieldPojo subObject : subObjects) {
+                    SalesforceSObjectPojo subObjectDetails = (SalesforceSObjectPojo) subObject.getValue();
+                    SalesforceSObjectFieldPojo subIdObj = subObjectDetails.getField("id");
+                    SalesforceSObjectFieldPojo subTypeObj = subObjectDetails.getField("sobjectType");
+
+                    if (    subIdObj != null && subIdObj.getValue() != null &&
+                            subTypeObj != null && subTypeObj.getValue() != null) {
+                        if (!subObjectsToSearch.containsKey(subIdObj.getValue().toString())) {
+                            subObjectsToSearch.put(subIdObj.getValue().toString(), subTypeObj.getValue().toString());
+                        } else {
+                            logger.trace("[xx] Already added subobject search for id {}", subIdObj.getValue().toString());
+                        }
+                    } else {
+                        logger.debug("[x] Cannot check for sub-objects. Missing id ({}) or type ({})", subIdObj, subTypeObj);
+                    }
+                }
+            }
+
+            if (!subObjectsToSearch.isEmpty()) {
+                logger.trace("[xx] {} subobjects to search", subObjectsToSearch.size());
+                for (Map.Entry<String, String> e : subObjectsToSearch.entrySet()) {
+                    if (!items.keySet().stream().map(SalesforceItemKeyPojo::getRecordId).collect(Collectors.toSet()).contains(e.getKey())) {
+                        logger.info("[*] Will look for object id {} with type {}", e.getKey(), e.getValue());
+                        this.getObject(items, e.getKey(), e.getValue());
+                    } else {
+                        logger.debug("[x] Will not look for object id {} with type {}: already recovered.", e.getKey(), e.getValue());
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -431,7 +493,7 @@ public class SFClient extends BaseClient {
 
                             if (id != null) {
                                 try {
-                                    SalesforceSObjectPojo sObjectPojo = this.getObject(id.toString(), "ListView");
+                                    SalesforceSObjectPojo sObjectPojo = this.getObject(id.toString(),false, "ListView");
                                     objects.add(sObjectPojo);
                                 } catch (SalesforceAuraMissingRecordIdException e) {
                                     logger.error("[!] Error on search for record {} from previous list.", id);
@@ -457,7 +519,7 @@ public class SFClient extends BaseClient {
                         String recordId = record.get("Id").toString();
                         SalesforceSObjectPojo so;
                         try {
-                            so = this.getObject(recordId, recordTypeToRetrieve);
+                            so = this.getObject(recordId, false, recordTypeToRetrieve);
                         } catch (SalesforceAuraMissingRecordIdException | SalesforceAuraInvalidParameters e) {
                             logger.error("[!] Error on search for record {}.", recordId);
 
@@ -496,7 +558,7 @@ public class SFClient extends BaseClient {
                         // Enrich the results
                         SalesforceSObjectPojo so;
                         try {
-                            so = this.getObject(recordId, recordTypeToRetrieve);
+                            so = this.getObject(recordId, false, recordTypeToRetrieve);
                         } catch (SalesforceAuraMissingRecordIdException | SalesforceAuraInvalidParameters e) {
                             logger.error("[!] Error on search for record {}.", recordId);
 
@@ -547,7 +609,7 @@ public class SFClient extends BaseClient {
                         logger.info("[*] Found {} entities of types {} through SOAP API!", sObjectIds.size(), recordTypeToRetrieve);
                         logger.trace("[xx] Will try to find all object data matching these IDs.");
                         for (String id : sObjectIds) {
-                            SalesforceSObjectPojo sobject = this.getObject(id, recordTypeToRetrieve);
+                            SalesforceSObjectPojo sobject = this.getObject(id, false, recordTypeToRetrieve);
                             logger.trace("[xx] SOAP: Found object {}.", sobject);
                             items.put(new SalesforceItemKeyPojo(SOAP_API_KEY, id, recordTypeToRetrieve), sobject);
                         }
@@ -581,7 +643,7 @@ public class SFClient extends BaseClient {
                         logger.trace("[xx] Query Data API: Found object {}.", o);
 
                         try {
-                            SalesforceSObjectPojo sobject = this.getObject(o.get("Id").toString(), recordTypeToRetrieve);
+                            SalesforceSObjectPojo sobject = this.getObject(o.get("Id").toString(), false, recordTypeToRetrieve);
                             logger.trace("[xx] Query Data API: Found rich object {}.", sobject);
                             items.put(new SalesforceItemKeyPojo(SOBJECTS_REST_API_KEY, sobject.getId(), recordTypeToRetrieve), sobject);
                         } catch (SalesforceAuraMissingRecordIdException e) {
