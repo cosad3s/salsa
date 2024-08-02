@@ -3,6 +3,7 @@ package com.cosades.salsa.utils;
 import com.cosades.salsa.configuration.AuraConfiguration;
 import com.cosades.salsa.enumeration.SalesforceAuraHttpResponseBodyActionsStateEnum;
 import com.cosades.salsa.exception.SalesforceAuraClientCSRFException;
+import com.cosades.salsa.exception.SalesforceAuraClientNoAccessException;
 import com.cosades.salsa.exception.SalesforceAuraClientNotSyncException;
 import com.cosades.salsa.pojo.SalesforceAuraHttpResponseBodyPojo;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -32,6 +33,7 @@ public abstract class AuraHttpUtils {
             // Legacy case for out-of-sync
             checkOutOfSyncClientLegacy(responseBody);
             checkCSRFClient(responseBody);
+            checkAuraNoAccess(responseBody);
             return null;
         }
     }
@@ -191,6 +193,19 @@ public abstract class AuraHttpUtils {
         Matcher matcher = regexPattern.matcher(body);
         if (matcher.find()) {
             throw new SalesforceAuraClientCSRFException();
+        }
+    }
+
+    /**
+     * Site app name cannot be used on this target
+     * @param body
+     */
+    private static void checkAuraNoAccess(final String body) throws SalesforceAuraClientNoAccessException {
+        final String regex = ".*markup://aura:noAccess.*";
+        final Pattern regexPattern = Pattern.compile(regex);
+        Matcher matcher = regexPattern.matcher(body);
+        if (matcher.find()) {
+            throw new SalesforceAuraClientNoAccessException();
         }
     }
 }

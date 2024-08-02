@@ -191,7 +191,7 @@ public abstract class BaseClient {
                 this.auraFwUid = e.getFwuid();
                 logger.warn("[!] Client is out-of-sync. Will retry with new FWUID: {}", e.getFwuid());
                 return this.sendAura(requestBodyPojo);
-            } catch (SalesforceAuraClientCSRFException e2) {
+            } catch (SalesforceAuraClientCSRFException | SalesforceAuraClientNoAccessException e2) {
                 if (!this.auraAppNames.isEmpty()) {
                     this.auraAppName = this.auraAppNames.pop();
                     logger.warn("[!] Site app name is incorrect. Will retry with new app name: {}", this.auraAppName);
@@ -199,6 +199,18 @@ public abstract class BaseClient {
                 } else {
                     logger.error("[x] Unable to call the target.");
                 }
+            } catch (SalesforceAuraClientNotSyncNoFwuidException e) {
+                logger.warn("[!] Client is out-of-sync. Will try to find the new FWUID");
+                logger.debug("[x] Will retry without authentication for resync.");
+                SalesforceAuraCredentialsPojo credentials = new SalesforceAuraCredentialsPojo("","");
+                SalesforceAuraHttpRequestBodyPojo requestNoAuth = new SalesforceAuraHttpRequestBodyPojo(requestBodyPojo.getDescriptorName(), requestBodyPojo.getParams(), credentials);
+                this.httpClient.updateCookie("sid", "");
+                this.sendAura(requestNoAuth);
+
+                // Re-send the original request (note: the request does not hold elements like fwuid, appName ...)
+                logger.debug("[x] Will retry with authentication after resync.");
+                this.httpClient.updateCookie("sid", this.credentials.getSid());
+                return this.sendAura(requestBodyPojo);
             }
         }
     }
