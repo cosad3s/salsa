@@ -41,6 +41,10 @@ public abstract class ArgumentsParserUtils {
             parser.addArgument("--bruteforce")
                     .action(Arguments.storeTrue())
                     .help("Enable bruteforce of Salesforce identifiers from a specific record id (from --recordid).");
+            parser.addArgument("--bruteforcesize")
+                    .type(Integer.class)
+                    .setDefault(10)
+                    .help("Specific identifiers amount to bruteforce.");
             parser.addArgument("--types")
                     .type(String.class)
                     .help("Target record(s) only from following type(s) (should be comma-separated).");

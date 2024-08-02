@@ -32,6 +32,7 @@ public class Scanner {
         String forcedPath = ArgumentsParserUtils.getArgument(args, "path");
         String recordId = ArgumentsParserUtils.getArgument(args, "id");
         String bruteforce = ArgumentsParserUtils.getArgument(args, "bruteforce");
+        String bruteforceSize = ArgumentsParserUtils.getArgument(args, "bruteforcesize");
         String initialRecordTypes = ArgumentsParserUtils.getArgument(args, "types");
         String doTestUpdate = ArgumentsParserUtils.getArgument(args, "update");
         String doTestCreate = ArgumentsParserUtils.getArgument(args, "create");
@@ -142,7 +143,7 @@ public class Scanner {
 
                 if (Boolean.parseBoolean(bruteforce)) {
                     try {
-                        ids.addAll(SalesforceIdGenerator.generateIds(recordId, 10));
+                        ids.addAll(SalesforceIdGenerator.generateIds(recordId, Integer.parseInt(bruteforceSize)));
                     } catch (SalesforceInvalidIdException e) {
                         logger.error("[!] Invalid Salesforce record id for bruteforce operation.");
                         System.exit(-1);
@@ -152,7 +153,7 @@ public class Scanner {
                 for (String id : ids) {
                     logger.debug("[x] Try to get {} records for identifiers {}", recordTypesList, ids);
                     try {
-                        SalesforceSObjectPojo o = client.getObject(id, recordTypesList);
+                        SalesforceSObjectPojo o = client.getObject(id, true, recordTypesList);
                         if (o != null) {
                             objects.add(o);
                         }
@@ -182,6 +183,9 @@ public class Scanner {
                     System.exit(-1);
                 } catch (SalesforceAuraUnauthenticatedException e) {
                     logger.error("[!] Cannot continue: authentication is mandatory.");
+                    System.exit(-1);
+                } catch (SalesforceAuraInvalidParameters | SalesforceAuraMissingRecordIdException e) {
+                    logger.error("[!] Internal problem in searching for detail on specific sub-object.", e);
                     System.exit(-1);
                 }
             }

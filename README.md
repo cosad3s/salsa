@@ -37,8 +37,9 @@ I decided to share it for free, to help the community.
 
 ```bash
 usage: SALSA 💃⚡ - SALesforce Scanner for Aura (and beyond)
-       [-h] -t TARGET [-u USERNAME] [-p PASSWORD] [--sid SID] [--token TOKEN] [--path PATH] [--id ID] [--bruteforce] [--types TYPES] [--update] [--create] [--ua UA] [--proxy PROXY] [--dump]
-       [--output OUTPUT] [--typesintrospection] [--typeswordlist] [--typesapi] [--custom] [--app APP] [--force] [--debug] [--trace]
+       [-h] -t TARGET [-u USERNAME] [-p PASSWORD] [--sid SID] [--token TOKEN] [--path PATH] [--id ID] [--bruteforce] [--bruteforcesize BRUTEFORCESIZE]
+       [--types TYPES] [--update] [--create] [--ua UA] [--proxy PROXY] [--dump] [--output OUTPUT] [--typesintrospection] [--typeswordlist] [--typesapi]
+       [--custom] [--app APP] [--force] [--debug] [--trace]
 
 Enumeration of vulnerabilities and misconfiguration against Salesforce endpoint.
 
@@ -55,6 +56,8 @@ named arguments:
   --path PATH            Set specific base path.
   --id ID                Find a specific record from its id.
   --bruteforce           Enable bruteforce of Salesforce identifiers from a specific record id (from --recordid). (default: false)
+  --bruteforcesize BRUTEFORCESIZE
+                         Specific identifiers amount to bruteforce. (default: 10)
   --types TYPES          Target record(s) only from following type(s) (should be comma-separated).
   --update               Test for record fields update permissions (WARNING: will inject data in the app!). (default: false)
   --create               Test for record creation permissions (WARNING: will inject data in the app!). (default: false)
@@ -235,7 +238,6 @@ Picked up _JAVA_OPTIONS: -Dawt.useSystemAAFontSettings=on -Dswing.aatext=true
 ## Current limitations
 
 - SOAP `query` requests are limited to 10 items.
-- Bruteforcing IDs is limited to 10 items.
 
 ## TODO
 
@@ -266,6 +268,10 @@ Picked up _JAVA_OPTIONS: -Dawt.useSystemAAFontSettings=on -Dswing.aatext=true
 4. Route the tool **an HTTP proxy** for further investigation (`--proxy 127.0.0.1:8080` for instance)
 
 ## Q/A
+
+*How long it takes to dump all objects from a target ?*
+
+> I measured between 3 and 4 hours on average (*with standard options, without debug and without proxy*).
 
 *Why is the authentication username/password does not work ?*
 
