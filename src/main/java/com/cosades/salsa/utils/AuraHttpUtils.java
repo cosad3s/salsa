@@ -145,10 +145,8 @@ public abstract class AuraHttpUtils {
     }
 
     public static boolean checkSecuredField(final String body) {
-        final String regex = ".*Unable to create/update fields.*";
-        final Pattern regexPattern = Pattern.compile(regex);
-        Matcher matcher = regexPattern.matcher(body);
-        if (matcher.find()) {
+        final String unableString = "Unable to create/update fields";
+        if (body.contains(unableString)) {
             LOGGER.trace("[xx] Identified secured field.");
             return true;
         }
@@ -189,10 +187,8 @@ public abstract class AuraHttpUtils {
      * @throws SalesforceAuraClientNotSyncNoFwuidException
      */
     private static void checkOutOfSyncClientNoFwuid(final String responseBody) throws SalesforceAuraClientNotSyncNoFwuidException {
-        final String regex = ".*markup://aura:clientOutOfSync.*";
-        final Pattern regexPattern = Pattern.compile(regex);
-        final Matcher matcher = regexPattern.matcher(responseBody);
-        if (matcher.find()) {
+        final String outOfSyncString = "markup://aura:clientOutOfSync";
+        if (responseBody.contains(outOfSyncString)) {
             throw new SalesforceAuraClientNotSyncNoFwuidException();
         }
     }
@@ -203,10 +199,8 @@ public abstract class AuraHttpUtils {
      * @throws SalesforceAuraClientCSRFException
      */
     private static void checkCSRFClient(final String body) throws SalesforceAuraClientCSRFException {
-        final String regex = ".*invalid_csrf.*";
-        final Pattern regexPattern = Pattern.compile(regex);
-        Matcher matcher = regexPattern.matcher(body);
-        if (matcher.find()) {
+        final String csrfString = "invalid_csrf";
+        if (body.contains(csrfString)) {
             throw new SalesforceAuraClientCSRFException();
         }
     }
@@ -216,10 +210,8 @@ public abstract class AuraHttpUtils {
      * @param body
      */
     private static void checkAuraNoAccess(final String body) throws SalesforceAuraClientNoAccessException {
-        final String regex = ".*markup://aura:noAccess.*";
-        final Pattern regexPattern = Pattern.compile(regex);
-        Matcher matcher = regexPattern.matcher(body);
-        if (matcher.find()) {
+        final String noAccessString = "markup://aura:noAccess";
+        if (body.contains(noAccessString)) {
             throw new SalesforceAuraClientNoAccessException();
         }
     }
