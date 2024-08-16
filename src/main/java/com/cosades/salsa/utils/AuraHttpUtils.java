@@ -175,10 +175,8 @@ public abstract class AuraHttpUtils {
      */
     private static void checkOutOfSyncClient(final SalesforceAuraHttpResponseBodyPojo response, final String body) throws SalesforceAuraClientNotSyncException {
         if (!Arrays.stream(response.getActions()).filter(a -> SalesforceAuraHttpResponseBodyActionsStateEnum.warning.equals(a.getState())).collect(Collectors.toSet()).isEmpty()) {
-            final String regex = ".*This page has changes since the last refresh. To get the latest updates, save your work and finish your conversations before refreshing the page..*";
-            final Pattern regexPattern = Pattern.compile(regex);
-            final Matcher matcher = regexPattern.matcher(body);
-            if (matcher.find()) {
+            final String refreshString = "This page has changes since the last refresh. To get the latest updates, save your work and finish your conversations before refreshing the page";
+            if (body.contains(refreshString)) {
                 throw new SalesforceAuraClientNotSyncException(response.getContext().getFwuid());
             }
         }
