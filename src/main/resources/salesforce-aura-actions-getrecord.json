@@ -10,5 +10,12 @@
     "params": {
       "recordDescriptor":""
     }
+  },
+  {
+    "descriptor": "serviceComponent://ui.communities.components.aura.components.forceCommunity.controller.RecordDetailController/ACTION$getInitData",
+    "params": {
+      "recordId":"",
+      "isDesktop":true
+    }
   }
 ]
