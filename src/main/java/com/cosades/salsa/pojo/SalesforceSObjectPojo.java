@@ -13,6 +13,7 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -142,6 +143,10 @@ public class SalesforceSObjectPojo {
     public SalesforceSObjectFieldPojo getField(String fieldName) {
         Optional<SalesforceSObjectFieldPojo> field = fields.stream().filter(f -> fieldName.equalsIgnoreCase(f.getName())).findFirst();
         return field.orElse(null);
+    }
+
+    public Set<String> getFieldNames() {
+        return this.getFields().stream().map(SalesforceSObjectFieldPojo::getName).collect(Collectors.toSet());
     }
 
     public boolean haveField(String value) {

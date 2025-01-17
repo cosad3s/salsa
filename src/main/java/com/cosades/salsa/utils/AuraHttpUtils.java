@@ -134,7 +134,7 @@ public abstract class AuraHttpUtils {
     public static boolean checkUnsupportedUpdate(final String body) {
         final String regex =
                 ".*CANNOT_INSERT_UPDATE_ACTIVATE_ENTITY.*|" +
-                ".*INSUFFICIENT_ACCESS_OR_READONLY.*";
+                ".*INSUFFICIENT_ACCESS.*";
         final Pattern regexPattern = Pattern.compile(regex);
         Matcher matcher = regexPattern.matcher(body);
         if (matcher.find()) {
@@ -143,6 +143,23 @@ public abstract class AuraHttpUtils {
         }
         return false;
     }
+
+    public static boolean checkUnsupportedCreate(final String body) {
+        final String regex = ".*entity type cannot be inserted.*|" +
+                             ".*is not supported in UI API.*|" +
+                             ".*INSUFFICIENT_ACCESS.*|" +
+                             ".*CANNOT_INSERT_UPDATE_ACTIVATE_ENTITY.*|"
+                             + ".*is not queryable.*";
+        final Pattern regexPattern = Pattern.compile(regex);
+        Matcher matcher = regexPattern.matcher(body);
+        if (matcher.find()) {
+            LOGGER.trace("[xx] The target object cannot be created.");
+            return true;
+        }
+        return false;
+    }
+
+    // entity type cannot be inserted
 
     public static boolean checkSecuredField(final String body) {
         final String unableString = "Unable to create/update fields";
@@ -173,8 +190,10 @@ public abstract class AuraHttpUtils {
      */
     private static void checkOutOfSyncClient(final SalesforceAuraHttpResponseBodyPojo response, final String body) throws SalesforceAuraClientNotSyncException {
         if (!Arrays.stream(response.getActions()).filter(a -> SalesforceAuraHttpResponseBodyActionsStateEnum.warning.equals(a.getState())).collect(Collectors.toSet()).isEmpty()) {
-            final String refreshString = "This page has changes since the last refresh. To get the latest updates, save your work and finish your conversations before refreshing the page";
-            if (body.contains(refreshString)) {
+            final String refreshStringRegex = "\"This page has changes since the last refresh. To get the latest updates, save your work and finish your conversations before refreshing the page\"|\"id\":\"COOSE\"";
+            final Pattern regexPattern = Pattern.compile(refreshStringRegex);
+            final Matcher matcher = regexPattern.matcher(body);
+            if (matcher.find()) {
                 throw new SalesforceAuraClientNotSyncException(response.getContext().getFwuid());
             }
         }

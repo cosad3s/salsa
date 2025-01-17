@@ -734,20 +734,30 @@ public class SFClient extends BaseClient {
                     continue;
                 }
 
-                message.setParamsValue("apiName", type);
+                Map<String, Object> recordInputParams = new HashMap<>();
+                recordInputParams.put("apiName", type);
+
+
 
                 final Set<String> fieldNames;
                 try {
                     fieldNames = this.getObjectFieldNames(type);
-                } catch (SalesforceAuraInvalidParameters e) {
+                } catch (SalesforceAuraInvalidParameters | SalesforceAuraInvalidRequestInput e) {
                     logger.error("[!] Invalid request parameters.", e);
                     continue;
                 }
-                final Set<SalesforceSObjectFieldPojo> fields = fieldNames.stream().map(f -> new SalesforceSObjectFieldPojo(f, "")).collect(Collectors.toSet());
+                final Set<SalesforceSObjectFieldPojo> fields =
+                        fieldNames
+                                .stream()
+                                .filter(f -> !f.equalsIgnoreCase("id"))
+                                .map(f ->
+                                        new SalesforceSObjectFieldPojo(f.substring(f.lastIndexOf('.') + 1), ""))
+                                .collect(Collectors.toSet());
 
                 if (fields.isEmpty()) {
                     logger.warn("[!] Will try to create object type {} without field through descriptor {} (cannot retrieve object info).", type, descriptor);
-                    message.setParamsValue("fields", new HashMap<>());
+                    recordInputParams.put("fields", fields);
+                    message.setParamsValue("recordInput", recordInputParams);
 
                     // Request
                     SalesforceAuraHttpRequestBodyPojo requestBodyPojo =
@@ -768,10 +778,16 @@ public class SFClient extends BaseClient {
                     }
 
                     // Process result
+                    if (AuraHttpUtils.checkUnsupportedCreate(salesforceAuraHttpResponseBody.getRawBody())) {
+                        logger.warn("[!] The entity {} does not support create.", type);
+                        updateUnsupportedObject(descriptor, type);
+                        break;
+                    }
+
                     SalesforceAuraHttpResponseBodyActionsPojo[] actionsResults = salesforceAuraHttpResponseBody.getActions();
                     if (actionsResults == null || actionsResults.length == 0) {
                         logger.debug("[x] Cannot retrieve sobject types from descriptor {}: empty results (bad action ?).", descriptor);
-                        return;
+                        break;
                     }
 
                     Map<String, Object> returnValue = actionsResults[0].getReturnValue();
@@ -801,8 +817,9 @@ public class SFClient extends BaseClient {
                         }
                         fieldsMap.put(fieldName, fieldValue);
                         logger.debug("[x] Try with fields {}", fieldsMap);
-                        message.setParamsValue("fields", fieldsMap);
 
+                        recordInputParams.put("fields", fieldsMap);
+                        message.setParamsValue("recordInput", recordInputParams);
                         // Request
                         SalesforceAuraHttpRequestBodyPojo requestBodyPojo =
                                 new SalesforceAuraHttpRequestBodyPojo(
@@ -822,10 +839,16 @@ public class SFClient extends BaseClient {
                         }
 
                         // Process result
+                        if (AuraHttpUtils.checkUnsupportedCreate(salesforceAuraHttpResponseBody.getRawBody())) {
+                            logger.warn("[!] The entity {} does not support create.", type);
+                            updateUnsupportedObject(descriptor, type);
+                            break;
+                        }
+
                         SalesforceAuraHttpResponseBodyActionsPojo[] actionsResults = salesforceAuraHttpResponseBody.getActions();
                         if (actionsResults == null || actionsResults.length == 0) {
                             logger.debug("[x] Cannot retrieve sobject types from descriptor {}: empty results (bad action ?).", descriptor);
-                            return;
+                            break;
                         }
 
                         Map<String, Object> returnValue = actionsResults[0].getReturnValue();
