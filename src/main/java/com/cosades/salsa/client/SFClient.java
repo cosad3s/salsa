@@ -66,6 +66,19 @@ public class SFClient extends BaseClient {
         this.wordlistEnabledForTypes = wordlistEnabledForTypes;
         this.apiEnabledForTypes = apiEnabledForTypes;
         this.customTypesOnly = customTypesOnly;
+
+        if (this.introspectionEnabledForTypes) {
+            logger.info("[*] Introspection enabled: build entities names and fields.");
+            SalesforceSObjectsConfiguration.init();
+
+            logger.info("[*] Introspection enabled: caching fields.");
+            Set<SalesforceSObjectPojo> objects = SalesforceSObjectsConfiguration.getSObjects();
+            for (SalesforceSObjectPojo o : objects) {
+                ObjectFieldCache cache = new ObjectFieldCache();
+                cache.setFields(o.getFieldNames());
+                this.objectFieldCaches.put(o.getSObjectType(), cache);
+            }
+        }
     }
 
     /**

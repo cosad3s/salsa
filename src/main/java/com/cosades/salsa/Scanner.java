@@ -60,11 +60,6 @@ public class Scanner {
             output = "./output" + new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss", Locale.US).format(new Date());
         }
 
-        if (Boolean.parseBoolean(recordtypesfromintrospection)) {
-            logger.info("[*] Launching Salesforce scanner... (warming up, please wait)");
-            SalesforceSObjectsConfiguration.init();
-        }
-
         SFClient client = null;
         try {
             client = new SFClient(
