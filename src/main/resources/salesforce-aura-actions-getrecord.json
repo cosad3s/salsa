@@ -17,5 +17,12 @@
       "recordId":"",
       "isDesktop":true
     }
+  },
+  {
+    "descriptor": "serviceComponent://ui.communities.components.aura.components.forceCommunity.recordHeadline.RecordHeadlineController/ACTION$getInitData",
+    "params": {
+      "recordId":"",
+      "isDesktop":true
+    }
   }
 ]
