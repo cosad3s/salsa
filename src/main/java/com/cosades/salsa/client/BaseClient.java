@@ -54,7 +54,7 @@ public abstract class BaseClient {
         } catch (SalesforceAuraClientBadRequestException | SalesforceAuraUnauthenticatedException e) {
             logger.error("[!] Unable to authenticate: invalid request or invalid credentials.");
             throw new SalesforceAuraAuthenticationException();
-        } catch (SalesforceAuraInvalidParameters e) {
+        } catch (SalesforceAuraInvalidParameters | SalesforceAuraInvalidRequestInput e) {
             logger.error("[!] Invalid request parameters.", e);
             throw new SalesforceAuraAuthenticationException();
         }
@@ -133,7 +133,7 @@ public abstract class BaseClient {
         this.httpClient.updateCookie("sid", this.credentials.getSid());
     }
 
-    protected SalesforceAuraHttpResponseBodyPojo sendAura(final SalesforceAuraHttpRequestBodyPojo requestBodyPojo) throws SalesforceAuraClientBadRequestException, SalesforceAuraUnauthenticatedException, SalesforceAuraInvalidParameters {
+    protected SalesforceAuraHttpResponseBodyPojo sendAura(final SalesforceAuraHttpRequestBodyPojo requestBodyPojo) throws SalesforceAuraClientBadRequestException, SalesforceAuraUnauthenticatedException, SalesforceAuraInvalidParameters, SalesforceAuraInvalidRequestInput {
         requestBodyPojo.setFwuid(this.auraFwUid);
         requestBodyPojo.setAppName(this.auraAppName);
         requestBodyPojo.setMode(this.auraContextMode);
@@ -185,7 +185,11 @@ public abstract class BaseClient {
                     salesforceAuraHttpResponseBody.setRawBody(response.getBody());
                     return salesforceAuraHttpResponseBody;
                 } else {
-                    logger.error("[x] Unable to get a parseable HTTP response.");
+                    if (AuraHttpUtils.isSalesforceAura(response.getBody())) {
+                        throw new SalesforceAuraInvalidRequestInput();
+                    } else {
+                        logger.error("[x] Unable to get a parseable HTTP response.");
+                    }
                 }
             } catch (SalesforceAuraClientNotSyncException e) {
                 this.auraFwUid = e.getFwuid();
@@ -211,6 +215,8 @@ public abstract class BaseClient {
                 logger.debug("[x] Will retry with authentication after resync.");
                 this.httpClient.updateCookie("sid", this.credentials.getSid());
                 return this.sendAura(requestBodyPojo);
+            } catch (SalesforceAuraInvalidRequestInput e) {
+                throw new SalesforceAuraInvalidRequestInput();
             }
         }
     }

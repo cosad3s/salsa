@@ -159,13 +159,13 @@ public class Scanner {
                         }
 
                     } catch (SalesforceAuraMissingRecordIdException e) {
-                        logger.error("[!] Cannot continue: missing recordId");
+                        logger.error("[!] Cannot continue: missing recordId", e);
                         System.exit(-1);
-                    } catch (SalesforceAuraInvalidParameters e) {
-                        logger.error("[!] Parameters are invalid.");
+                    } catch (SalesforceAuraInvalidParameters | SalesforceAuraInvalidRequestInput e) {
+                        logger.error("[!] Parameters or request are invalid.", e);
                         System.exit(-1);
                     } catch (SalesforceAuraClientBadRequestException e) {
-                        logger.error("[!] Error during API requests.");
+                        logger.error("[!] Error during API requests.", e);
                         System.exit(-1);
                     } catch (SalesforceAuraUnauthenticatedException e) {
                         logger.error("[!] Cannot continue: authentication is mandatory.");
@@ -179,12 +179,12 @@ public class Scanner {
                     objects = client.getObjects(recordTypesList);
 
                 } catch (SalesforceAuraClientBadRequestException e) {
-                    logger.error("[!] Error during API requests.");
+                    logger.error("[!] Error during API requests.",e );
                     System.exit(-1);
                 } catch (SalesforceAuraUnauthenticatedException e) {
                     logger.error("[!] Cannot continue: authentication is mandatory.");
                     System.exit(-1);
-                } catch (SalesforceAuraInvalidParameters | SalesforceAuraMissingRecordIdException e) {
+                } catch (SalesforceAuraInvalidParameters | SalesforceAuraMissingRecordIdException | SalesforceAuraInvalidRequestInput e) {
                     logger.error("[!] Internal problem in searching for detail on specific sub-object.", e);
                     System.exit(-1);
                 }
@@ -202,10 +202,10 @@ public class Scanner {
                         try {
                             client.writeToObjectFields(recordId, recordTypesList);
                         } catch (SalesforceAuraClientBadRequestException e) {
-                            logger.error("[!] Error during API requests.");
+                            logger.error("[!] Error during API requests.", e);
                             System.exit(-1);
                         } catch (SalesforceAuraMissingRecordIdException e) {
-                            logger.error("[!] Missing recordId for an object for field testing");
+                            logger.error("[!] Missing recordId for an object for field testing", e);
                         } catch (SalesforceAuraUnauthenticatedException e) {
                             logger.error("[!] Cannot continue: authentication is mandatory.");
                             System.exit(-1);
@@ -219,10 +219,10 @@ public class Scanner {
                         try {
                             client.writeToObjectFields(object);
                         } catch (SalesforceAuraClientBadRequestException e) {
-                            logger.error("[!] Error during API requests.");
+                            logger.error("[!] Error during API requests.", e);
                             System.exit(-1);
                         } catch (SalesforceAuraMissingRecordIdException e) {
-                            logger.error("[!] Missing recordId for an object for field testing");
+                            logger.error("[!] Missing recordId for an object for field testing", e);
                         } catch (SalesforceAuraUnauthenticatedException e) {
                             logger.error("[!] Cannot continue: authentication is mandatory.");
                             System.exit(-1);
@@ -240,7 +240,7 @@ public class Scanner {
                     DumpUtils.dump(objects, output);
                 }
             } catch (SalesforceAuraClientBadRequestException e) {
-                logger.error("[!] Error during API requests.");
+                logger.error("[!] Error during API requests.", e);
                 System.exit(-1);
             } catch (SalesforceAuraUnauthenticatedException e) {
                 logger.error("[!] Cannot continue: authentication is mandatory.");

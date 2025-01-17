@@ -86,10 +86,21 @@ public class SFClient extends BaseClient {
         List<String> testedPaths = StringUtils.isNotBlank(forcedPath) ? List.of(forcedPath) : AuraConfiguration.getAuraUris();
 
         for (String path : testedPaths) {
+            auraPath = path;
             logger.debug("[x] Searching for Salesforce Aura on {}", path);
-            HttpReponsePojo response = this.httpClient.post(path);
-            if ((response.getCode() == 200 || response.getCode() == 401) && AuraHttpUtils.isSalesforceAura(response.getBody())) {
-                auraPath = path;
+
+            String descriptor = "";
+            Map<String, Object> params = new HashMap<>();
+            SalesforceAuraCredentialsPojo credentials = new SalesforceAuraCredentialsPojo();
+
+            SalesforceAuraHttpRequestBodyPojo httpRequest = new SalesforceAuraHttpRequestBodyPojo(descriptor, params, credentials);
+            try {
+                this.sendAura(httpRequest);
+            } catch (SalesforceAuraClientBadRequestException e) {
+                logger.debug("Cannot work on path {}. Continue.", path, e);
+                continue;
+            } catch (SalesforceAuraInvalidRequestInput | SalesforceAuraUnauthenticatedException | SalesforceAuraInvalidParameters e) {
+                logger.debug("Found potential path {}. Stop search.", path, e);
                 break;
             }
         }
@@ -101,7 +112,7 @@ public class SFClient extends BaseClient {
      * @param recordId: requested recordId (required)
      * @param sObjectTypes: requested objectType(s) (optional; but more chance to find the record)
      */
-    public SalesforceSObjectPojo getObject(final String recordId, final boolean recursive, final String ... sObjectTypes) throws SalesforceAuraMissingRecordIdException, SalesforceAuraInvalidParameters, SalesforceAuraClientBadRequestException, SalesforceAuraUnauthenticatedException {
+    public SalesforceSObjectPojo getObject(final String recordId, final boolean recursive, final String ... sObjectTypes) throws SalesforceAuraMissingRecordIdException, SalesforceAuraInvalidParameters, SalesforceAuraClientBadRequestException, SalesforceAuraUnauthenticatedException, SalesforceAuraInvalidRequestInput {
         Map<SalesforceItemKeyPojo, SalesforceSObjectPojo> items = new HashMap<>();
 
         if (sObjectTypes == null) {
@@ -122,7 +133,7 @@ public class SFClient extends BaseClient {
         return SObjectUtils.merge(items.values());
     }
 
-    public List<SalesforceSObjectPojo> getObjects(final String[] sObjectTypes) throws SalesforceAuraClientBadRequestException, SalesforceAuraUnauthenticatedException, SalesforceAuraInvalidParameters, SalesforceAuraMissingRecordIdException {
+    public List<SalesforceSObjectPojo> getObjects(final String[] sObjectTypes) throws SalesforceAuraClientBadRequestException, SalesforceAuraUnauthenticatedException, SalesforceAuraInvalidParameters, SalesforceAuraMissingRecordIdException, SalesforceAuraInvalidRequestInput {
         Map<SalesforceItemKeyPojo, SalesforceSObjectPojo> items = new HashMap<>();
 
         if (sObjectTypes != null) {
@@ -162,7 +173,7 @@ public class SFClient extends BaseClient {
      * @throws SalesforceAuraClientBadRequestException
      * @throws SalesforceAuraMissingRecordIdException
      */
-    private void getSubObjects(Map<SalesforceItemKeyPojo, SalesforceSObjectPojo> items) throws SalesforceAuraUnauthenticatedException, SalesforceAuraInvalidParameters, SalesforceAuraClientBadRequestException, SalesforceAuraMissingRecordIdException {
+    private void getSubObjects(Map<SalesforceItemKeyPojo, SalesforceSObjectPojo> items) throws SalesforceAuraUnauthenticatedException, SalesforceAuraInvalidParameters, SalesforceAuraClientBadRequestException, SalesforceAuraMissingRecordIdException, SalesforceAuraInvalidRequestInput {
 
         if (!items.isEmpty()) {
             logger.debug("[x] Will try to find sub-objects from {} items", items.size());
@@ -216,7 +227,7 @@ public class SFClient extends BaseClient {
      * @param sObjectType requested objectType (optional; but more chance to find the record)
      */
     @SuppressWarnings("unchecked")
-    private void getObject(Map<SalesforceItemKeyPojo, SalesforceSObjectPojo> items, final String recordId, final String sObjectType) throws SalesforceAuraMissingRecordIdException, SalesforceAuraClientBadRequestException, SalesforceAuraUnauthenticatedException, SalesforceAuraInvalidParameters {
+    private void getObject(Map<SalesforceItemKeyPojo, SalesforceSObjectPojo> items, final String recordId, final String sObjectType) throws SalesforceAuraMissingRecordIdException, SalesforceAuraClientBadRequestException, SalesforceAuraUnauthenticatedException, SalesforceAuraInvalidParameters, SalesforceAuraInvalidRequestInput {
 
         if (StringUtils.isBlank(recordId)) {
             logger.error("[!] Cannot select record: no recordId specified.");
@@ -266,7 +277,7 @@ public class SFClient extends BaseClient {
             SalesforceAuraHttpResponseBodyPojo salesforceAuraHttpResponseBody;
             try {
                 salesforceAuraHttpResponseBody = this.sendAura(requestBodyPojo);
-            } catch (SalesforceAuraClientBadRequestException e) {
+            } catch (SalesforceAuraClientBadRequestException | SalesforceAuraInvalidRequestInput e) {
                 logger.error("[!] Invalid request.", e);
                 throw e;
             }
@@ -450,7 +461,7 @@ public class SFClient extends BaseClient {
                 } catch (SalesforceAuraClientBadRequestException e) {
                     logger.debug("[!] Invalid request.", e);
                     throw e;
-                } catch (SalesforceAuraInvalidParameters e) {
+                } catch (SalesforceAuraInvalidParameters | SalesforceAuraInvalidRequestInput e) {
                     logger.debug("[!] Invalid request parameters.", e);
                     continue;
                 }
@@ -496,9 +507,9 @@ public class SFClient extends BaseClient {
                                     SalesforceSObjectPojo sObjectPojo = this.getObject(id.toString(),false, "ListView");
                                     objects.add(sObjectPojo);
                                 } catch (SalesforceAuraMissingRecordIdException e) {
-                                    logger.error("[!] Error on search for record {} from previous list.", id);
-                                } catch (SalesforceAuraInvalidParameters e) {
-                                    logger.error("[!] Invalid parameter transmitted to Aura.");
+                                    logger.error("[!] Error on search for record {} from previous list.", id, e);
+                                } catch (SalesforceAuraInvalidParameters | SalesforceAuraInvalidRequestInput e) {
+                                    logger.error("[!] Invalid parameter transmitted to Aura.", e);
                                 }
                             }
                         }
@@ -520,8 +531,8 @@ public class SFClient extends BaseClient {
                         SalesforceSObjectPojo so;
                         try {
                             so = this.getObject(recordId, false, recordTypeToRetrieve);
-                        } catch (SalesforceAuraMissingRecordIdException | SalesforceAuraInvalidParameters e) {
-                            logger.error("[!] Error on search for record {}.", recordId);
+                        } catch (SalesforceAuraMissingRecordIdException | SalesforceAuraInvalidParameters | SalesforceAuraInvalidRequestInput e) {
+                            logger.error("[!] Error on search for record {}.", recordId, e);
 
                             // Error: just save the initial record
                             SalesforceSObjectPojo o = SObjectUtils.createSObject(record);
@@ -559,7 +570,7 @@ public class SFClient extends BaseClient {
                         SalesforceSObjectPojo so;
                         try {
                             so = this.getObject(recordId, false, recordTypeToRetrieve);
-                        } catch (SalesforceAuraMissingRecordIdException | SalesforceAuraInvalidParameters e) {
+                        } catch (SalesforceAuraMissingRecordIdException | SalesforceAuraInvalidParameters | SalesforceAuraInvalidRequestInput e) {
                             logger.error("[!] Error on search for record {}.", recordId);
 
                             // Error: just save the initial record
@@ -616,10 +627,10 @@ public class SFClient extends BaseClient {
 
                     } catch (SalesforceSOAPParsingException e) {
                         logger.error("[!] Cannot parse SOAP response", e);
-                    } catch (SalesforceAuraInvalidParameters e) {
-                        logger.error("[!] Invalid parameter transmitted to Aura.");
+                    } catch (SalesforceAuraInvalidParameters | SalesforceAuraInvalidRequestInput e) {
+                        logger.error("[!] Invalid parameter transmitted to Aura.", e);
                     } catch (SalesforceAuraMissingRecordIdException e) {
-                        logger.error("[!] Record id cannot be found.");
+                        logger.error("[!] Record id cannot be found.", e);
                     }
                 }
 
@@ -647,9 +658,9 @@ public class SFClient extends BaseClient {
                             logger.trace("[xx] Query Data API: Found rich object {}.", sobject);
                             items.put(new SalesforceItemKeyPojo(SOBJECTS_REST_API_KEY, sobject.getId(), recordTypeToRetrieve), sobject);
                         } catch (SalesforceAuraMissingRecordIdException e) {
-                            logger.error("[!] Record id cannot be found.");
-                        } catch (SalesforceAuraInvalidParameters e) {
-                            logger.error("[!] Invalid parameter transmitted to Aura.");
+                            logger.error("[!] Record id cannot be found.", e);
+                        } catch (SalesforceAuraInvalidParameters | SalesforceAuraInvalidRequestInput e) {
+                            logger.error("[!] Invalid parameter transmitted to Aura.", e);
                         }
                     }
                 }
@@ -738,7 +749,7 @@ public class SFClient extends BaseClient {
                     } catch (SalesforceAuraClientBadRequestException e) {
                         logger.error("[!] Invalid request.", e);
                         throw e;
-                    } catch (SalesforceAuraInvalidParameters e) {
+                    } catch (SalesforceAuraInvalidParameters | SalesforceAuraInvalidRequestInput e) {
                         logger.error("[!] Invalid request parameters.", e);
                         continue;
                     }
@@ -792,7 +803,7 @@ public class SFClient extends BaseClient {
                         } catch (SalesforceAuraClientBadRequestException e) {
                             logger.error("[!] Invalid request.", e);
                             throw e;
-                        } catch (SalesforceAuraInvalidParameters e) {
+                        } catch (SalesforceAuraInvalidParameters | SalesforceAuraInvalidRequestInput e) {
                             logger.error("[!] Invalid request parameters.", e);
                             continue;
                         }
@@ -859,7 +870,7 @@ public class SFClient extends BaseClient {
             final Set<String> fieldNames;
             try {
                 fieldNames = this.getObjectFieldNames(objectType);
-            } catch (SalesforceAuraInvalidParameters e) {
+            } catch (SalesforceAuraInvalidParameters | SalesforceAuraInvalidRequestInput e) {
                 logger.error("[!] Invalid request parameters.", e);
                 continue;
             }
@@ -926,7 +937,7 @@ public class SFClient extends BaseClient {
             } catch (SalesforceAuraClientBadRequestException e) {
                 logger.error("[!] Invalid request.", e);
                 throw e;
-            } catch (SalesforceAuraInvalidParameters e) {
+            } catch (SalesforceAuraInvalidParameters | SalesforceAuraInvalidRequestInput e) {
                 logger.error("[!] Invalid request parameters.", e);
                 continue;
             }
@@ -958,7 +969,7 @@ public class SFClient extends BaseClient {
             Map<SalesforceItemKeyPojo, SalesforceSObjectPojo> items = new HashMap<>();
             try {
                 this.getObjectWithFields(items, objectId, objectType, Set.of(objectType + "." + fieldName));
-            } catch (SalesforceAuraInvalidParameters e) {
+            } catch (SalesforceAuraInvalidParameters | SalesforceAuraInvalidRequestInput e) {
                 logger.error("[!] Invalid request parameters.", e);
                 continue;
             }
@@ -1000,7 +1011,7 @@ public class SFClient extends BaseClient {
             } catch (SalesforceAuraClientBadRequestException e) {
                 logger.error("[!] Invalid request.", e);
                 throw e;
-            } catch (SalesforceAuraInvalidParameters e) {
+            } catch (SalesforceAuraInvalidParameters | SalesforceAuraInvalidRequestInput e) {
                 logger.error("[!] Invalid request parameters.", e);
                 continue;
             }
@@ -1115,13 +1126,17 @@ public class SFClient extends BaseClient {
     }
 
     @SuppressWarnings("unchecked")
-    private Set<String> getObjectFieldNames(final String sObjectType) throws SalesforceAuraClientBadRequestException, SalesforceAuraUnauthenticatedException, SalesforceAuraInvalidParameters {
+    private Set<String> getObjectFieldNames(final String sObjectType) throws SalesforceAuraClientBadRequestException, SalesforceAuraUnauthenticatedException, SalesforceAuraInvalidParameters, SalesforceAuraInvalidRequestInput {
 
         Set<String> fields = new TreeSet<>();
         if (StringUtils.isBlank(sObjectType)) {
             logger.error("[!] No object type for fields search!");
             return fields;
         }
+
+
+        // TODO si le cache est placé, alors le /describe n'est pas appelé.
+        // TODO il faudrait une fusion /describe + cache (si introspection est activé)
 
         // Look in cache first
         if (this.objectFieldCaches.containsKey(sObjectType)) {
@@ -1158,7 +1173,7 @@ public class SFClient extends BaseClient {
             } catch (SalesforceAuraClientBadRequestException e) {
                 logger.error("[!] Invalid request.", e);
                 throw e;
-            } catch (SalesforceAuraInvalidParameters e) {
+            } catch (SalesforceAuraInvalidParameters | SalesforceAuraInvalidRequestInput e) {
                 logger.error("[!] Invalid request parameters.", e);
                 throw e;
             }
@@ -1213,7 +1228,7 @@ public class SFClient extends BaseClient {
     }
 
     @SuppressWarnings({"unchecked","rawtypes"})
-    private void getObjectWithFields(Map<SalesforceItemKeyPojo, SalesforceSObjectPojo> items, final String recordId, final String sObjectType, final Set<String> fields) throws SalesforceAuraMissingRecordIdException, SalesforceAuraClientBadRequestException, SalesforceAuraUnauthenticatedException, SalesforceAuraInvalidParameters {
+    private void getObjectWithFields(Map<SalesforceItemKeyPojo, SalesforceSObjectPojo> items, final String recordId, final String sObjectType, final Set<String> fields) throws SalesforceAuraMissingRecordIdException, SalesforceAuraClientBadRequestException, SalesforceAuraUnauthenticatedException, SalesforceAuraInvalidParameters, SalesforceAuraInvalidRequestInput {
 
         if (StringUtils.isBlank(recordId)) {
             logger.error("[!] Cannot select record with fields: no recordId specified.");
@@ -1315,7 +1330,7 @@ public class SFClient extends BaseClient {
         } catch (SalesforceAuraClientBadRequestException e) {
             logger.error("[!] Invalid request.", e);
             throw e;
-        } catch (SalesforceAuraInvalidParameters e) {
+        } catch (SalesforceAuraInvalidParameters | SalesforceAuraInvalidRequestInput e) {
             logger.error("[!] Invalid request parameters.", e);
             throw e;
         }
