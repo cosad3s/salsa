@@ -9,6 +9,7 @@ import java.util.Set;
 @Data
 @NoArgsConstructor
 public class ObjectFieldCache {
+    private boolean updatedFromTarget = false;
     private Set<String> fields = new HashSet<>();
 
     public Set<String> addFields(final Set<String> newFields) {

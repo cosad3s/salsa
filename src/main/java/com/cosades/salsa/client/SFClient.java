@@ -1170,14 +1170,13 @@ public class SFClient extends BaseClient {
             return fields;
         }
 
-
-        // TODO si le cache est placé, alors le /describe n'est pas appelé.
-        // TODO il faudrait une fusion /describe + cache (si introspection est activé)
-
         // Look in cache first
         if (this.objectFieldCaches.containsKey(sObjectType)) {
-            logger.trace("[xx] Will use field cache for object type {}", sObjectType);
-            return this.objectFieldCaches.get(sObjectType).getFields();
+            if (this.objectFieldCaches.get(sObjectType).isUpdatedFromTarget()) {
+                logger.trace("[xx] Will use field cache for object type {}", sObjectType);
+                return this.objectFieldCaches.get(sObjectType).getFields();
+            }
+            logger.trace("[xx] Will not use field cache for object type {} because fields are not representative from the target.", sObjectType);
         } else {
             this.objectFieldCaches.put(sObjectType, new ObjectFieldCache());
         }
