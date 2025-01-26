@@ -14,6 +14,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.URL;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -30,10 +31,18 @@ public class SFClient extends BaseClient {
     private final String SOAP_API_KEY = "SOAP_API";
     private final String QUERY_DATA_API_KEY = "QUERY_DATA_REST_API";
 
-    public SFClient(final String baseUrl,
+    public SFClient(final URL baseUrl,
                     final String proxy,
                     final String userAgent,
                     final String appName) throws HttpClientBadUrlException {
+
+        String scheme = baseUrl.getProtocol();
+        String host = baseUrl.getHost();
+        int port = baseUrl.getPort();
+        String cleanedUrl = port == -1
+                ? String.format("%s://%s", scheme, host)
+                : String.format("%s://%s:%d", scheme, host, port);
+
         if (StringUtils.isNotBlank(proxy)) {
             String[] proxyParts = proxy.split(":");
             if (proxyParts.length != 2) {
@@ -42,18 +51,19 @@ public class SFClient extends BaseClient {
             }
             String proxyHost = proxyParts[0];
             int proxyPort = Integer.parseInt(proxyParts[1]);
-            this.httpClient = new HttpClient(baseUrl, userAgent, proxyHost,proxyPort);
+            this.httpClient = new HttpClient(cleanedUrl, userAgent, proxyHost,proxyPort);
         } else {
-            this.httpClient = new HttpClient(baseUrl, userAgent, null, -1);
+            this.httpClient = new HttpClient(cleanedUrl, userAgent, null, -1);
         }
 
         if (StringUtils.isNotBlank(appName)) {
+            this.auraAppNames.clear();
             this.auraAppNames.addFirst(appName);
         }
         this.auraAppName = this.auraAppNames.pop();
     }
 
-    public SFClient(final String baseUrl,
+    public SFClient(final URL baseUrl,
                     final String proxy,
                     final String userAgent,
                     final boolean introspectionEnabledForTypes,
@@ -108,12 +118,15 @@ public class SFClient extends BaseClient {
 
             SalesforceAuraHttpRequestBodyPojo httpRequest = new SalesforceAuraHttpRequestBodyPojo(descriptor, params, credentials);
             try {
-                this.sendAura(httpRequest);
+                SalesforceAuraHttpResponsePojo response = this.sendAura(httpRequest);
+                if (response.getHttpResponse().getCode() == 500) {
+                    throw new SalesforceAuraClientBadRequestException();
+                }
             } catch (SalesforceAuraClientBadRequestException e) {
-                logger.debug("Cannot work on path {}. Continue.", path, e);
-                continue;
+                logger.debug("[x] Cannot work on path {}. Continue.", path);
+                auraPath = "";
             } catch (SalesforceAuraInvalidRequestInput | SalesforceAuraUnauthenticatedException | SalesforceAuraInvalidParameters e) {
-                logger.debug("Found potential path {}. Stop search.", path, e);
+                logger.debug("[x] Found potential path {}. Stop search.", path);
                 break;
             }
         }
@@ -192,9 +205,11 @@ public class SFClient extends BaseClient {
             logger.debug("[x] Will try to find sub-objects from {} items", items.size());
             Set<SalesforceSObjectFieldPojo> subObjects = new HashSet<>();
             for (SalesforceSObjectPojo foundObject : items.values()) {
-                Set<SalesforceSObjectFieldPojo> fields = foundObject.getFields().stream().filter(f -> (f.getValue() instanceof SalesforceSObjectPojo)).collect(Collectors.toSet());
-                if (!fields.isEmpty()) {
-                    subObjects.addAll(fields.stream().filter(f -> ((SalesforceSObjectPojo) (f.getValue())).getFields().stream().anyMatch(subfield -> subfield.getName().equalsIgnoreCase("id"))).collect(Collectors.toSet()));
+                if (foundObject != null) {
+                    Set<SalesforceSObjectFieldPojo> fields = foundObject.getFields().stream().filter(f -> (f.getValue() instanceof SalesforceSObjectPojo)).collect(Collectors.toSet());
+                    if (!fields.isEmpty()) {
+                        subObjects.addAll(fields.stream().filter(f -> ((SalesforceSObjectPojo) (f.getValue())).getFields().stream().anyMatch(subfield -> subfield.getName().equalsIgnoreCase("id"))).collect(Collectors.toSet()));
+                    }
                 }
             }
             logger.debug("[x] Found potential {} sub-objects to dig", subObjects.size());
@@ -287,7 +302,7 @@ public class SFClient extends BaseClient {
                             message.getParams(),
                             this.credentials);
 
-            SalesforceAuraHttpResponseBodyPojo salesforceAuraHttpResponseBody;
+            SalesforceAuraHttpResponsePojo salesforceAuraHttpResponseBody;
             try {
                 salesforceAuraHttpResponseBody = this.sendAura(requestBodyPojo);
             } catch (SalesforceAuraClientBadRequestException | SalesforceAuraInvalidRequestInput e) {
@@ -307,7 +322,7 @@ public class SFClient extends BaseClient {
 
                 // Unsupported object type
                 if (StringUtils.isNotBlank(sObjectType)) {
-                    String unsupported = AuraHttpUtils.checkUnsupportedRecordResults(salesforceAuraHttpResponseBody.getRawBody());
+                    String unsupported = AuraHttpUtils.checkUnsupportedRecordResults(salesforceAuraHttpResponseBody.getHttpResponse().getBody());
                     if (StringUtils.isNotBlank(unsupported)) {
                         this.updateUnsupportedObject(descriptor, unsupported);
                         continue;
@@ -468,7 +483,7 @@ public class SFClient extends BaseClient {
                                 message.getParams(),
                                 this.credentials);
 
-                SalesforceAuraHttpResponseBodyPojo salesforceAuraHttpResponseBody;
+                SalesforceAuraHttpResponsePojo salesforceAuraHttpResponseBody;
                 try {
                     salesforceAuraHttpResponseBody = this.sendAura(requestBodyPojo);
                 } catch (SalesforceAuraClientBadRequestException e) {
@@ -489,7 +504,7 @@ public class SFClient extends BaseClient {
                 // "Maybe" an error happened
                 if (!SalesforceAuraHttpResponseBodyActionsStateEnum.SUCCESS.equals(actionsResults[0].getState())) {
                     // Unsupported object type
-                    String unsupported = AuraHttpUtils.checkUnsupportedRecordResults(salesforceAuraHttpResponseBody.getRawBody());
+                    String unsupported = AuraHttpUtils.checkUnsupportedRecordResults(salesforceAuraHttpResponseBody.getHttpResponse().getBody());
                     if (StringUtils.isNotBlank(unsupported)) {
                         this.updateUnsupportedObject(descriptor, unsupported);
                         continue;
@@ -624,7 +639,7 @@ public class SFClient extends BaseClient {
                 // SOAP API
                 logger.info("[*] SOAP: looking for records for type {}", recordTypeToRetrieve);
                 String request = SOAPRequestFactory.createQueryRequest(this.credentials.getSid(), recordTypeToRetrieve, new String[]{"Id"});
-                HttpReponsePojo response = this.sendSOAP(request);
+                HttpResponsePojo response = this.sendSOAP(request);
                 if (response != null && StringUtils.isNotBlank(response.getBody()) && !SOAPUtils.checkUnsupportedEntity(response.getBody())) {
 
                     try {
@@ -766,7 +781,7 @@ public class SFClient extends BaseClient {
                                     message.getParams(),
                                     this.credentials);
 
-                    SalesforceAuraHttpResponseBodyPojo salesforceAuraHttpResponseBody;
+                    SalesforceAuraHttpResponsePojo salesforceAuraHttpResponseBody;
                     try {
                         salesforceAuraHttpResponseBody = this.sendAura(requestBodyPojo);
                     } catch (SalesforceAuraClientBadRequestException e) {
@@ -778,7 +793,7 @@ public class SFClient extends BaseClient {
                     }
 
                     // Process result
-                    if (AuraHttpUtils.checkUnsupportedCreate(salesforceAuraHttpResponseBody.getRawBody())) {
+                    if (AuraHttpUtils.checkUnsupportedCreate(salesforceAuraHttpResponseBody.getHttpResponse().getBody())) {
                         logger.warn("[!] The entity {} does not support create.", type);
                         updateUnsupportedObject(descriptor, type);
                         break;
@@ -827,7 +842,7 @@ public class SFClient extends BaseClient {
                                         message.getParams(),
                                         this.credentials);
 
-                        SalesforceAuraHttpResponseBodyPojo salesforceAuraHttpResponseBody;
+                        SalesforceAuraHttpResponsePojo salesforceAuraHttpResponseBody;
                         try {
                             salesforceAuraHttpResponseBody = this.sendAura(requestBodyPojo);
                         } catch (SalesforceAuraClientBadRequestException e) {
@@ -839,7 +854,7 @@ public class SFClient extends BaseClient {
                         }
 
                         // Process result
-                        if (AuraHttpUtils.checkUnsupportedCreate(salesforceAuraHttpResponseBody.getRawBody())) {
+                        if (AuraHttpUtils.checkUnsupportedCreate(salesforceAuraHttpResponseBody.getHttpResponse().getBody())) {
                             logger.warn("[!] The entity {} does not support create.", type);
                             updateUnsupportedObject(descriptor, type);
                             break;
@@ -967,7 +982,7 @@ public class SFClient extends BaseClient {
                             message.getParams(),
                             this.credentials);
 
-            SalesforceAuraHttpResponseBodyPojo salesforceAuraHttpResponseBody;
+            SalesforceAuraHttpResponsePojo salesforceAuraHttpResponseBody;
             try {
                 salesforceAuraHttpResponseBody = this.sendAura(requestBodyPojo);
             } catch (SalesforceAuraClientBadRequestException e) {
@@ -988,14 +1003,15 @@ public class SFClient extends BaseClient {
             // "Maybe" an error happened
             if (!SalesforceAuraHttpResponseBodyActionsStateEnum.SUCCESS.equals(actionsResults[0].getState())) {
                 logger.debug("[x] Cannot update field {} from object {} {} with descriptor {}.", fieldName, objectType, objectId, descriptor);
-                if (AuraHttpUtils.checkUnsupportedUpdate(salesforceAuraHttpResponseBody.getRawBody())) {
+                String body = salesforceAuraHttpResponseBody.getHttpResponse().getBody();
+                if (AuraHttpUtils.checkUnsupportedUpdate(body)) {
                     logger.warn("[!] [{}] record cannot be updated (tested on {} with descriptor {}) due to security measures.", objectType, objectId, descriptor);
                     return;
                 }
-                if (AuraHttpUtils.checkInvalidValueForField(salesforceAuraHttpResponseBody.getRawBody())) {
+                if (AuraHttpUtils.checkInvalidValueForField(body)) {
                     logger.warn("[!] Field probably updatable: [{}][{}] (tested on {} with descriptor {}) but got error due to probable invalid / custom type! Check manually.", objectType, fieldName, objectId, descriptor);
                 }
-                else if (AuraHttpUtils.checkSecuredField(salesforceAuraHttpResponseBody.getRawBody())) {
+                else if (AuraHttpUtils.checkSecuredField(body)) {
                     logger.warn("[!] Field not updatable: [{}][{}] (tested on {} with descriptor {}) due to security measures.", objectType, fieldName, objectId, descriptor);
                 }
                 continue;
@@ -1041,7 +1057,7 @@ public class SFClient extends BaseClient {
                             message.getParams(),
                             this.credentials);
 
-            SalesforceAuraHttpResponseBodyPojo salesforceAuraHttpResponseBody;
+            SalesforceAuraHttpResponsePojo salesforceAuraHttpResponseBody;
             try {
                 salesforceAuraHttpResponseBody = this.sendAura(requestBodyPojo);
             } catch (SalesforceAuraClientBadRequestException e) {
@@ -1202,7 +1218,7 @@ public class SFClient extends BaseClient {
                             message.getParams(),
                             this.credentials);
 
-            SalesforceAuraHttpResponseBodyPojo salesforceAuraHttpResponseBody;
+            SalesforceAuraHttpResponsePojo salesforceAuraHttpResponseBody;
             try {
                 salesforceAuraHttpResponseBody = this.sendAura(requestBodyPojo);
             } catch (SalesforceAuraClientBadRequestException e) {
@@ -1223,7 +1239,7 @@ public class SFClient extends BaseClient {
             // "Maybe" an error happened
             if (!SalesforceAuraHttpResponseBodyActionsStateEnum.SUCCESS.equals(actionsResults[0].getState())) {
                 // Unsupported object type
-                String unsupported = AuraHttpUtils.checkUnsupportedRecordResults(salesforceAuraHttpResponseBody.getRawBody());
+                String unsupported = AuraHttpUtils.checkUnsupportedRecordResults(salesforceAuraHttpResponseBody.getHttpResponse().getBody());
                 if (StringUtils.isNotBlank(unsupported)) {
                     this.updateUnsupportedObject(descriptor, unsupported);
                     break;
@@ -1359,7 +1375,7 @@ public class SFClient extends BaseClient {
                         message.getParams(),
                         this.credentials);
 
-        SalesforceAuraHttpResponseBodyPojo salesforceAuraHttpResponseBody;
+        SalesforceAuraHttpResponsePojo salesforceAuraHttpResponseBody;
         try {
             salesforceAuraHttpResponseBody = this.sendAura(requestBodyPojo);
         } catch (SalesforceAuraClientBadRequestException e) {
@@ -1382,7 +1398,7 @@ public class SFClient extends BaseClient {
 
             // Unsupported object type
             if (StringUtils.isNotBlank(sObjectType)) {
-                String unsupported = AuraHttpUtils.checkUnsupportedRecordResults(salesforceAuraHttpResponseBody.getRawBody());
+                String unsupported = AuraHttpUtils.checkUnsupportedRecordResults(salesforceAuraHttpResponseBody.getHttpResponse().getBody());
                 if (StringUtils.isNotBlank(unsupported)) {
                     this.updateUnsupportedObject(descriptor, unsupported);
                     return;
@@ -1391,7 +1407,7 @@ public class SFClient extends BaseClient {
 
             // Unsupported field
             if (message.getParams().containsKey("fields")) {
-                String unknownColumn = AuraHttpUtils.checkUnknownColumnFromResults(salesforceAuraHttpResponseBody.getRawBody());
+                String unknownColumn = AuraHttpUtils.checkUnknownColumnFromResults(salesforceAuraHttpResponseBody.getHttpResponse().getBody());
                 if (StringUtils.isNotBlank(unknownColumn)) {
                     // Retry without this field
                     Set<String> newFields = ((Set<String>)message.getParams().get("fields")).stream()

@@ -1,7 +1,7 @@
 package com.cosades.salsa.client;
 
 import com.cosades.salsa.exception.HttpClientBadUrlException;
-import com.cosades.salsa.pojo.HttpReponsePojo;
+import com.cosades.salsa.pojo.HttpResponsePojo;
 import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hc.client5.http.classic.methods.HttpGet;
@@ -127,11 +127,11 @@ public class HttpClient {
         this.baseUrl = URI.create(redirectUrl);
     }
 
-    public HttpReponsePojo post(final String uri) {
+    public HttpResponsePojo post(final String uri) {
         return this.post(uri, "", ContentType.APPLICATION_FORM_URLENCODED);
     }
 
-    public HttpReponsePojo post(final String uri, final String requestJsonBody, final ContentType contentType, final Header ... headers) {
+    public HttpResponsePojo post(final String uri, final String requestJsonBody, final ContentType contentType, final Header ... headers) {
 
         URI finalUrl = URI.create(this.baseUrl.toString() + uri);
 
@@ -150,21 +150,21 @@ public class HttpClient {
             request.setConfig(requestConfig);
         }
 
-        HttpClientResponseHandler<HttpReponsePojo> responseHandler = response -> {
+        HttpClientResponseHandler<HttpResponsePojo> responseHandler = response -> {
             HttpEntity entity = response.getEntity();
 
-            return new HttpReponsePojo(EntityUtils.toString(entity), response.getCode(), response.getHeaders());
+            return new HttpResponsePojo(EntityUtils.toString(entity), response.getCode(), response.getHeaders());
         };
 
         try (CloseableHttpClient httpClient = this.createHttpClient()){
             return httpClient.execute(request, responseHandler);
         } catch (IOException e) {
             logger.error("[!] Error on POST request to {}", uri, e);
-            return new HttpReponsePojo();
+            return new HttpResponsePojo();
         }
     }
 
-    public HttpReponsePojo get(final String uri, final Header ... headers) {
+    public HttpResponsePojo get(final String uri, final Header ... headers) {
         URI finalUrl = URI.create(this.baseUrl.toString() + uri);
 
         HttpGet request = new HttpGet(finalUrl);
@@ -179,16 +179,16 @@ public class HttpClient {
             request.setConfig(requestConfig);
         }
 
-        HttpClientResponseHandler<HttpReponsePojo> responseHandler = response -> {
+        HttpClientResponseHandler<HttpResponsePojo> responseHandler = response -> {
             HttpEntity entity = response.getEntity();
-            return new HttpReponsePojo(EntityUtils.toString(entity), response.getCode(), response.getHeaders());
+            return new HttpResponsePojo(EntityUtils.toString(entity), response.getCode(), response.getHeaders());
         };
 
         try (CloseableHttpClient httpClient = this.createHttpClient()){
             return httpClient.execute(request, responseHandler);
         } catch (IOException e) {
             logger.error("[!] Error on GET request to {}", uri, e);
-            return new HttpReponsePojo();
+            return new HttpResponsePojo();
         }
     }
 

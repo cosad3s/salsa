@@ -1,6 +1,6 @@
 package com.cosades.salsa.utils;
 
-import com.cosades.salsa.pojo.HttpReponsePojo;
+import com.cosades.salsa.pojo.HttpResponsePojo;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hc.core5.http.Header;
 import org.slf4j.Logger;
@@ -37,7 +37,7 @@ public abstract class HttpUtils {
      * @param strict: true for strict search, false for .*cookieName.* search
      * @return
      */
-    public static String findCookieFromHttpResponse(final HttpReponsePojo httpResponse, final String cookieName, final boolean strict) {
+    public static String findCookieFromHttpResponse(final HttpResponsePojo httpResponse, final String cookieName, final boolean strict) {
 
         if (StringUtils.isBlank(cookieName)) {
             LOGGER.error("[!] No cookie value to search for.");
@@ -72,7 +72,7 @@ public abstract class HttpUtils {
      * @return list of matching HTTP headers
      */
 
-    public static List<Header> findHeaders(final HttpReponsePojo httpResponse, final String headerName) {
+    public static List<Header> findHeaders(final HttpResponsePojo httpResponse, final String headerName) {
         if (StringUtils.isBlank(headerName)) {
             LOGGER.error("[!] No header name value to search for.");
             return new ArrayList<>();

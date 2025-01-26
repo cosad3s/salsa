@@ -8,7 +8,7 @@ import org.apache.hc.core5.http.Header;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class HttpReponsePojo {
+public class HttpResponsePojo {
     String body;
     int code;
     Header[] headers;

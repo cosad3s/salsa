@@ -6,18 +6,20 @@ import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 
+import java.net.URL;
+
 public abstract class ArgumentsParserUtils {
 
     private static Namespace parsedArguments;
 
-    public static String getArgument(final String[] args, final String argumentName) {
+    public static <T> T getArgument(final String[] args, final String argumentName, final Class<T> className) {
 
         if (parsedArguments == null) {
             ArgumentParser parser = ArgumentParsers.newFor("SALSA \uD83D\uDC83⚡ - SALesforce Scanner for Aura (and beyond)").build()
                     .defaultHelp(true)
                     .description("Enumeration of vulnerabilities and misconfiguration against Salesforce endpoint.");
             parser.addArgument("-t", "--target")
-                    .type(String.class)
+                    .type(URL.class)
                     .required(true)
                     .help("Target URL");
             parser.addArgument("-u", "--username")
@@ -103,6 +105,6 @@ public abstract class ArgumentsParserUtils {
             }
         }
 
-        return parsedArguments.getString(argumentName);
+        return parsedArguments.get(argumentName);
     }
 }

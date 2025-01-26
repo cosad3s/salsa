@@ -2,7 +2,6 @@ package com.cosades.salsa;
 
 import ch.qos.logback.classic.Level;
 import com.cosades.salsa.client.SFClient;
-import com.cosades.salsa.configuration.SalesforceSObjectsConfiguration;
 import com.cosades.salsa.exception.*;
 import com.cosades.salsa.pojo.SalesforceAuraCredentialsPojo;
 import com.cosades.salsa.pojo.SalesforceSObjectPojo;
@@ -14,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -22,36 +22,36 @@ public class Scanner {
     private static final Logger logger = LoggerFactory.getLogger(Scanner.class);
 
     public static void main(String[] args) throws IOException {
-        String target = ArgumentsParserUtils.getArgument(args, "target");
-        String username = ArgumentsParserUtils.getArgument(args, "username");
-        String password = ArgumentsParserUtils.getArgument(args, "password");
-        String sid = ArgumentsParserUtils.getArgument(args, "sid");
-        String token = ArgumentsParserUtils.getArgument(args, "token");
-        String proxy = ArgumentsParserUtils.getArgument(args, "proxy");
-        String userAgent = ArgumentsParserUtils.getArgument(args, "ua");
-        String forcedPath = ArgumentsParserUtils.getArgument(args, "path");
-        String recordId = ArgumentsParserUtils.getArgument(args, "id");
-        String bruteforce = ArgumentsParserUtils.getArgument(args, "bruteforce");
-        String bruteforceSize = ArgumentsParserUtils.getArgument(args, "bruteforcesize");
-        String initialRecordTypes = ArgumentsParserUtils.getArgument(args, "types");
-        String doTestUpdate = ArgumentsParserUtils.getArgument(args, "update");
-        String doTestCreate = ArgumentsParserUtils.getArgument(args, "create");
-        String doDump = ArgumentsParserUtils.getArgument(args, "dump");
-        String output = ArgumentsParserUtils.getArgument(args, "output");
-        String recordtypesfromintrospection = ArgumentsParserUtils.getArgument(args, "typesintrospection");
-        String recordtypesfromapi = ArgumentsParserUtils.getArgument(args, "typesapi");
-        String recordtypesfromwordlist = ArgumentsParserUtils.getArgument(args, "typeswordlist");
-        String appName = ArgumentsParserUtils.getArgument(args, "app");
-        String force = ArgumentsParserUtils.getArgument(args, "force");
-        String onlyCustomTypes = ArgumentsParserUtils.getArgument(args, "custom");
-        String debug = ArgumentsParserUtils.getArgument(args, "debug");
-        String trace = ArgumentsParserUtils.getArgument(args, "trace");
+        URL target = ArgumentsParserUtils.getArgument(args, "target", URL.class);
+        String username = ArgumentsParserUtils.getArgument(args, "username", String.class);
+        String password = ArgumentsParserUtils.getArgument(args, "password", String.class);
+        String sid = ArgumentsParserUtils.getArgument(args, "sid", String.class);
+        String token = ArgumentsParserUtils.getArgument(args, "token", String.class);
+        String proxy = ArgumentsParserUtils.getArgument(args, "proxy", String.class);
+        String userAgent = ArgumentsParserUtils.getArgument(args, "ua", String.class);
+        String forcedPath = ArgumentsParserUtils.getArgument(args, "path", String.class);
+        String recordId = ArgumentsParserUtils.getArgument(args, "id", String.class);
+        Boolean bruteforce = ArgumentsParserUtils.getArgument(args, "bruteforce", Boolean.class);
+        Integer bruteforceSize = ArgumentsParserUtils.getArgument(args, "bruteforcesize", Integer.class);
+        String initialRecordTypes = ArgumentsParserUtils.getArgument(args, "types", String.class);
+        Boolean doTestUpdate = ArgumentsParserUtils.getArgument(args, "update", Boolean.class);
+        Boolean doTestCreate = ArgumentsParserUtils.getArgument(args, "create", Boolean.class);
+        Boolean doDump = ArgumentsParserUtils.getArgument(args, "dump", Boolean.class);
+        String output = ArgumentsParserUtils.getArgument(args, "output", String.class);
+        Boolean recordtypesfromintrospection = ArgumentsParserUtils.getArgument(args, "typesintrospection", Boolean.class);
+        Boolean recordtypesfromapi = ArgumentsParserUtils.getArgument(args, "typesapi", Boolean.class);
+        Boolean recordtypesfromwordlist = ArgumentsParserUtils.getArgument(args, "typeswordlist", Boolean.class);
+        String appName = ArgumentsParserUtils.getArgument(args, "app", String.class);
+        Boolean force = ArgumentsParserUtils.getArgument(args, "force", Boolean.class);
+        Boolean onlyCustomTypes = ArgumentsParserUtils.getArgument(args, "custom", Boolean.class);
+        Boolean debug = ArgumentsParserUtils.getArgument(args, "debug", Boolean.class);
+        Boolean trace = ArgumentsParserUtils.getArgument(args, "trace", Boolean.class);
 
-        if (Boolean.parseBoolean(debug)) {
+        if (debug) {
             ch.qos.logback.classic.Logger root = (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger("com.cosades");
             root.setLevel(Level.DEBUG);
         }
-        if (Boolean.parseBoolean(trace)) {
+        if (trace) {
             ch.qos.logback.classic.Logger root = (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger("com.cosades");
             root.setLevel(Level.TRACE);
         }
@@ -66,10 +66,10 @@ public class Scanner {
                     target,
                     proxy,
                     userAgent,
-                    Boolean.parseBoolean(recordtypesfromintrospection),
-                    Boolean.parseBoolean(recordtypesfromwordlist),
-                    Boolean.parseBoolean(recordtypesfromapi),
-                    Boolean.parseBoolean(onlyCustomTypes),
+                    recordtypesfromintrospection,
+                    recordtypesfromwordlist,
+                    recordtypesfromapi,
+                    onlyCustomTypes,
                     appName);
         } catch (HttpClientBadUrlException e) {
             logger.error("[!] Invalid parameters.", e);
@@ -87,7 +87,7 @@ public class Scanner {
             logger.warn("[!] Found Salesforce Aura instance on path: {}", foundPath);
         } else {
             logger.error("[!] Warning: Salesforce Aura endpoint not found!");
-            if (!Boolean.parseBoolean(force)) {
+            if (!force) {
                 System.exit(-1);
             } else {
                 logger.warn("[!] Will continue anyway (usage of --force detected).");
@@ -128,7 +128,7 @@ public class Scanner {
         List<SalesforceSObjectPojo> objects = new ArrayList<>();
 
         // Read objects
-        if (!Boolean.parseBoolean(doTestCreate)) {
+        if (!doTestCreate) {
 
             // Get specific object(s)
             if (StringUtils.isNotBlank(recordId)) {
@@ -136,9 +136,9 @@ public class Scanner {
                 Set<String> ids = new HashSet<>();
                 ids.add(recordId);
 
-                if (Boolean.parseBoolean(bruteforce)) {
+                if (bruteforce) {
                     try {
-                        ids.addAll(SalesforceIdGenerator.generateIds(recordId, Integer.parseInt(bruteforceSize)));
+                        ids.addAll(SalesforceIdGenerator.generateIds(recordId, bruteforceSize));
                     } catch (SalesforceInvalidIdException e) {
                         logger.error("[!] Invalid Salesforce record id for bruteforce operation.");
                         System.exit(-1);
@@ -185,12 +185,12 @@ public class Scanner {
                 }
             }
 
-            if (Boolean.parseBoolean(doDump)) {
+            if (doDump) {
                 DumpUtils.dump(objects, output);
             }
 
             // Test fields on read objects (from type(s) or id)
-            if (Boolean.parseBoolean(doTestUpdate)) {
+            if (doTestUpdate) {
                 if (objects.isEmpty()) {
                     if (StringUtils.isNotBlank(recordId) && recordTypesList != null) {
                         logger.warn("[!] Will test fields on arbitrary object {} of type {}", recordId, recordTypesList);
@@ -231,7 +231,7 @@ public class Scanner {
             try {
                 objects = client.createRecords(recordTypesList);
 
-                if (Boolean.parseBoolean(doDump)) {
+                if (doDump) {
                     DumpUtils.dump(objects, output);
                 }
             } catch (SalesforceAuraClientBadRequestException e) {

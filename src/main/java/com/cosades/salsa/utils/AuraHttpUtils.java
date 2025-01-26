@@ -2,11 +2,9 @@ package com.cosades.salsa.utils;
 
 import com.cosades.salsa.configuration.AuraConfiguration;
 import com.cosades.salsa.enumeration.SalesforceAuraHttpResponseBodyActionsStateEnum;
-import com.cosades.salsa.exception.SalesforceAuraClientCSRFException;
-import com.cosades.salsa.exception.SalesforceAuraClientNoAccessException;
-import com.cosades.salsa.exception.SalesforceAuraClientNotSyncException;
-import com.cosades.salsa.exception.SalesforceAuraClientNotSyncNoFwuidException;
-import com.cosades.salsa.pojo.SalesforceAuraHttpResponseBodyPojo;
+import com.cosades.salsa.exception.*;
+import com.cosades.salsa.pojo.HttpResponsePojo;
+import com.cosades.salsa.pojo.SalesforceAuraHttpResponsePojo;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -22,20 +20,22 @@ import java.util.stream.Collectors;
 public abstract class AuraHttpUtils {
     private static final Logger LOGGER = LoggerFactory.getLogger(AuraHttpUtils.class);
 
-    public static SalesforceAuraHttpResponseBodyPojo parseHttpResponseBody(final String responseBody) throws SalesforceAuraClientNotSyncException, SalesforceAuraClientCSRFException, SalesforceAuraClientNotSyncNoFwuidException, SalesforceAuraClientNoAccessException {
+    public static SalesforceAuraHttpResponsePojo parseHttpResponse(final HttpResponsePojo httpResponse) throws SalesforceAuraClientNotSyncException, SalesforceAuraClientCSRFException, SalesforceAuraClientNotSyncNoFwuidException, SalesforceAuraClientNoAccessException, SalesforceAuraClientBadApiException {
+        String body = httpResponse.getBody();
         try {
             ObjectMapper om = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-            SalesforceAuraHttpResponseBodyPojo response = om.readValue(responseBody, SalesforceAuraHttpResponseBodyPojo.class);
+            SalesforceAuraHttpResponsePojo response = om.readValue(httpResponse.getBody(), SalesforceAuraHttpResponsePojo.class);
             // New case for out-of-sync ("warning coos")
-            checkOutOfSyncClient(response, responseBody);
+            checkOutOfSyncClient(response, body);
             return response;
         } catch (JsonProcessingException e) {
-            LOGGER.debug("[x] Error on parsing HTTP body {}", responseBody);
+            LOGGER.debug("[x] Error on parsing HTTP body {}", body);
             // Cases for out-of-sync
-            checkOutOfSyncClientNoFwuid(responseBody);
-            checkOutOfSyncClientLegacy(responseBody);
-            checkCSRFClient(responseBody);
-            checkAuraNoAccess(responseBody);
+            checkOutOfSyncClientNoFwuid(body);
+            checkOutOfSyncClientLegacy(body);
+            checkBadApi(body);
+            checkCSRFClient(body);
+            checkAuraNoAccess(body);
             return null;
         }
     }
@@ -188,8 +188,8 @@ public abstract class AuraHttpUtils {
      * Detect if the server is out of sync with client. The new FWUUID is returned from context if it is true.
      * @param body: Salesforce HTTP response body
      */
-    private static void checkOutOfSyncClient(final SalesforceAuraHttpResponseBodyPojo response, final String body) throws SalesforceAuraClientNotSyncException {
-        if (!Arrays.stream(response.getActions()).filter(a -> SalesforceAuraHttpResponseBodyActionsStateEnum.warning.equals(a.getState())).collect(Collectors.toSet()).isEmpty()) {
+    private static void checkOutOfSyncClient(final SalesforceAuraHttpResponsePojo response, final String body) throws SalesforceAuraClientNotSyncException {
+        if (response.getActions() != null && !Arrays.stream(response.getActions()).filter(a -> SalesforceAuraHttpResponseBodyActionsStateEnum.warning.equals(a.getState())).collect(Collectors.toSet()).isEmpty()) {
             final String refreshStringRegex = "\"This page has changes since the last refresh. To get the latest updates, save your work and finish your conversations before refreshing the page\"|\"id\":\"COOSE\"";
             final Pattern regexPattern = Pattern.compile(refreshStringRegex);
             final Matcher matcher = regexPattern.matcher(body);
@@ -221,6 +221,18 @@ public abstract class AuraHttpUtils {
         final String csrfString = "invalid_csrf";
         if (body.contains(csrfString)) {
             throw new SalesforceAuraClientCSRFException();
+        }
+    }
+
+    /**
+     * Occurs sometimes on conflict with authenticated credentials (mixed sid/token)
+     * @param body
+     * @throws SalesforceAuraClientBadApiException
+     */
+    private static void checkBadApi(final String body) throws SalesforceAuraClientBadApiException {
+        final String csrfString = "Bad api value supplied";
+        if (body.contains(csrfString)) {
+            throw new SalesforceAuraClientBadApiException();
         }
     }
 

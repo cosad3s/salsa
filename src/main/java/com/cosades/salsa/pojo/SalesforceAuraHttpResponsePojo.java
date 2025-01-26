@@ -7,9 +7,9 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class SalesforceAuraHttpResponseBodyPojo {
+public class SalesforceAuraHttpResponsePojo {
     private SalesforceAuraHttpResponseBodyActionsPojo[] actions;
     private SalesforceAuraHttpResponseBodyContextPojo context;
     private SalesforceAuraHttpResponseBodyEventsPojo[] events;
-    private String rawBody;
+    private HttpResponsePojo httpResponse;
 }

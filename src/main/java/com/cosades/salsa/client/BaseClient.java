@@ -48,7 +48,7 @@ public abstract class BaseClient {
                         messageToComplete.getParams(),
                         credentials);
 
-        SalesforceAuraHttpResponseBodyPojo salesforceAuraHttpResponseBody;
+        SalesforceAuraHttpResponsePojo salesforceAuraHttpResponseBody;
         try {
             salesforceAuraHttpResponseBody = this.sendAura(requestBodyPojo);
         } catch (SalesforceAuraClientBadRequestException | SalesforceAuraUnauthenticatedException e) {
@@ -76,7 +76,7 @@ public abstract class BaseClient {
             throw new SalesforceAuraAuthenticationException();
         }
 
-        HttpReponsePojo redirectHttpResponse;
+        HttpResponsePojo redirectHttpResponse;
         URI redirectURI = URI.create(redirectUrl);
         if (!redirectURI.getHost().equals(this.httpClient.getBaseUrl().getHost()) ||
                 redirectURI.getPort() != this.httpClient.getBaseUrl().getPort()) {
@@ -95,7 +95,7 @@ public abstract class BaseClient {
         }
 
         // Next step: find Salesforce Aura token
-        HttpReponsePojo responseAuraToken = httpClient.get("/s/");
+        HttpResponsePojo responseAuraToken = httpClient.get("/s/");
         String token = HttpUtils.findCookieFromHttpResponse(responseAuraToken, "Host-ERIC", false);
         if (StringUtils.isBlank(token)) {
             logger.error("[!] Unable to authenticate: empty Aura token.");
@@ -133,7 +133,7 @@ public abstract class BaseClient {
         this.httpClient.updateCookie("sid", this.credentials.getSid());
     }
 
-    protected SalesforceAuraHttpResponseBodyPojo sendAura(final SalesforceAuraHttpRequestBodyPojo requestBodyPojo) throws SalesforceAuraClientBadRequestException, SalesforceAuraUnauthenticatedException, SalesforceAuraInvalidParameters, SalesforceAuraInvalidRequestInput {
+    protected SalesforceAuraHttpResponsePojo sendAura(final SalesforceAuraHttpRequestBodyPojo requestBodyPojo) throws SalesforceAuraClientBadRequestException, SalesforceAuraUnauthenticatedException, SalesforceAuraInvalidParameters, SalesforceAuraInvalidRequestInput {
         requestBodyPojo.setFwuid(this.auraFwUid);
         requestBodyPojo.setAppName(this.auraAppName);
         requestBodyPojo.setMode(this.auraContextMode);
@@ -141,7 +141,7 @@ public abstract class BaseClient {
 
         int retries = 0;
 
-        SalesforceAuraHttpResponseBodyPojo salesforceAuraHttpResponseBody;
+        SalesforceAuraHttpResponsePojo salesforceAuraHttpResponseBody;
 
         while(true) {
 
@@ -154,7 +154,7 @@ public abstract class BaseClient {
             }
             retries++;
 
-            HttpReponsePojo response = this.httpClient.post(this.auraPath, requestBody, ContentType.APPLICATION_FORM_URLENCODED);
+            HttpResponsePojo response = this.httpClient.post(this.auraPath, requestBody, ContentType.APPLICATION_FORM_URLENCODED);
             int code = response.getCode();
             if (code != 200) {
                 logger.error("[!] Got an HTTP response code {}.", response.getCode());
@@ -179,10 +179,10 @@ public abstract class BaseClient {
 
             // Process the HTTP response
             try {
-                salesforceAuraHttpResponseBody = AuraHttpUtils.parseHttpResponseBody(response.getBody());
+                salesforceAuraHttpResponseBody = AuraHttpUtils.parseHttpResponse(response);
 
                 if (salesforceAuraHttpResponseBody != null) {
-                    salesforceAuraHttpResponseBody.setRawBody(response.getBody());
+                    salesforceAuraHttpResponseBody.setHttpResponse(response);
                     return salesforceAuraHttpResponseBody;
                 } else {
                     if (AuraHttpUtils.isSalesforceAura(response.getBody())) {
@@ -217,17 +217,21 @@ public abstract class BaseClient {
                 return this.sendAura(requestBodyPojo);
             } catch (SalesforceAuraInvalidRequestInput e) {
                 throw new SalesforceAuraInvalidRequestInput();
+            } catch (SalesforceAuraClientBadApiException e) {
+                logger.warn("[!] Will retry without sid cookie for Aura requests.");
+                this.httpClient.updateCookie("sid", "");
+                this.sendAura(requestBodyPojo);
             }
         }
     }
 
-    public HttpReponsePojo sendSOAP(final String requestBody) {
+    public HttpResponsePojo sendSOAP(final String requestBody) {
         Header soapHeader = new BasicHeader("SOAPAction","blank");
         return this.httpClient.post(DEFAULT_SOAP_PATH, requestBody, ContentType.TEXT_XML, soapHeader);
     }
 
     public SalesforceRESTSObjectsListHttpResponseBodyPojo sendRESTGetSObjectsList() {
-        HttpReponsePojo response;
+        HttpResponsePojo response;
         if (StringUtils.isNotBlank(this.credentials.getSid())) {
             Header authHeader = new BasicHeader("Authorization","OAuth " + this.credentials.getSid());
             response = this.httpClient.get(DEFAULT_SOBJECTS_API_PATH, authHeader);
@@ -242,7 +246,7 @@ public abstract class BaseClient {
 
         final String path = DEFAULT_SOBJECTS_API_PATH + "/" + type + "/" + id;
 
-        HttpReponsePojo response;
+        HttpResponsePojo response;
         if (StringUtils.isNotBlank(this.credentials.getSid())) {
             Header authHeader = new BasicHeader("Authorization","OAuth " + this.credentials.getSid());
             response = this.httpClient.get(path, authHeader);
@@ -257,7 +261,7 @@ public abstract class BaseClient {
 
         final String path = DEFAULT_SOBJECTS_API_PATH + "/" + type + "/";
 
-        HttpReponsePojo response;
+        HttpResponsePojo response;
         if (StringUtils.isNotBlank(this.credentials.getSid())) {
             Header authHeader = new BasicHeader("Authorization","OAuth " + this.credentials.getSid());
             response = this.httpClient.get(path, authHeader);
@@ -271,7 +275,7 @@ public abstract class BaseClient {
     protected Set<String> sendRESTGetSObjectDescribeFields(final String type) {
         final String path = DEFAULT_SOBJECTS_API_PATH + "/" + type + "/describe";
 
-        HttpReponsePojo response;
+        HttpResponsePojo response;
         if (StringUtils.isNotBlank(this.credentials.getSid())) {
             Header authHeader = new BasicHeader("Authorization","OAuth " + this.credentials.getSid());
             response = this.httpClient.get(path, authHeader);
@@ -285,7 +289,7 @@ public abstract class BaseClient {
     protected Set<SalesforceSObjectPojo> sendRESTGetSObjectsFromQuery(final String type) {
         final String path = DEFAULT_QUERY_API_PATH + "?q=SELECT+FIELDS(ALL)+FROM+"+ type +"+LIMIT+10";
 
-        HttpReponsePojo response;
+        HttpResponsePojo response;
         if (StringUtils.isNotBlank(this.credentials.getSid())) {
             Header authHeader = new BasicHeader("Authorization","OAuth " + this.credentials.getSid());
             response = this.httpClient.get(path, authHeader);
