@@ -40,7 +40,7 @@ public abstract class ArgumentsParserUtils {
                     .help("Find a specific record from its id.");
             parser.addArgument("--bruteforce")
                     .action(Arguments.storeTrue())
-                    .help("Enable bruteforce of Salesforce identifiers from a specific record id (from --recordid).");
+                    .help("Enable bruteforce of Salesforce identifiers from a specific record id (from --id).");
             parser.addArgument("--bruteforcesize")
                     .type(Integer.class)
                     .setDefault(10)
